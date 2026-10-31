@@ -1,0 +1,6 @@
+{
+  "name": "UP BOARD COCHING - Premier EdTech Portal",
+  "description": "Premier educational platform for UP Board Class 9, 10, 11 & 12 students featuring live classes, NCERT notes, PYQ papers, notifications, and student portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
