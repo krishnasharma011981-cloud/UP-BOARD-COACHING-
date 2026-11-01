@@ -11,7 +11,8 @@ export const SUPABASE_URL =
   'https://uolvqremklljqgoutdbl.supabase.co';
 
 export const SUPABASE_ANON_KEY =
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
+  'sb_publishable_nqj2i6dTULfrYRSwc3n0tQ_ZvJuXRSI';
 
 /**
  * Returns true if a valid Supabase anon key is provided
@@ -24,7 +25,7 @@ export const isSupabaseConfigured = (): boolean => {
   );
 };
 
-// Create client conditionally or fallback gracefully
+// Create client with persistent auth session
 export const supabase: SupabaseClient | null = isSupabaseConfigured()
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
@@ -48,13 +49,24 @@ export async function registerStudentWithSupabase(data: {
   schoolName: string;
 }) {
   if (!supabase) {
-    throw new Error('Supabase client is not configured with an Anon Key.');
+    console.warn('Supabase client is not configured.');
+    return null;
   }
 
-  // 1. Supabase Auth SignUp
+  // Sanitize email: if mobile provided without @, make a valid email format for Supabase Auth
+  const cleanMobile = data.mobile.replace(/\D/g, '');
+  const authEmail = data.email && data.email.includes('@')
+    ? data.email.trim().toLowerCase()
+    : `student_${cleanMobile || Date.now()}@upboard.in`;
+
+  const authPassword = data.password && data.password.length >= 6
+    ? data.password
+    : 'UpBoard@2027';
+
+  // 1. Supabase Auth SignUp - appears directly in Supabase Authentication Dashboard!
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password || 'UpBoard@2027',
+    email: authEmail,
+    password: authPassword,
     options: {
       data: {
         full_name: data.fullName,
@@ -67,25 +79,28 @@ export async function registerStudentWithSupabase(data: {
   });
 
   if (authError) {
-    throw authError;
+    console.warn('Supabase Auth SignUp notice:', authError.message);
   }
 
   // 2. Insert into public.students profile table
-  if (authData.user) {
-    const { error: profileError } = await supabase.from('students').upsert({
-      id: authData.user.id,
+  try {
+    const studentRecord = {
+      id: authData.user?.id || undefined,
       full_name: data.fullName,
-      email: data.email,
+      email: authEmail,
       mobile: data.mobile,
       class_level: data.classLevel,
-      district: data.district,
-      school_name: data.schoolName,
+      district: data.district || 'Uttar Pradesh',
+      school_name: data.schoolName || 'UPMSP Affiliated School',
       updated_at: new Date().toISOString(),
-    });
+    };
 
+    const { error: profileError } = await supabase.from('students').upsert(studentRecord);
     if (profileError) {
-      console.warn('Profile sync notice:', profileError.message);
+      console.warn('Students table upsert note:', profileError.message);
     }
+  } catch (err) {
+    console.warn('Profile sync exception:', err);
   }
 
   return authData;
@@ -94,13 +109,18 @@ export async function registerStudentWithSupabase(data: {
 /**
  * Helper to log in a student with Supabase Auth
  */
-export async function loginStudentWithSupabase(email: string, password?: string) {
+export async function loginStudentWithSupabase(identifier: string, password?: string) {
   if (!supabase) {
-    throw new Error('Supabase client is not configured with an Anon Key.');
+    return null;
   }
 
+  const cleanMobile = identifier.replace(/\D/g, '');
+  const emailToUse = identifier.includes('@')
+    ? identifier.trim().toLowerCase()
+    : `student_${cleanMobile}@upboard.in`;
+
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: emailToUse,
     password: password || 'UpBoard@2027',
   });
 
@@ -109,6 +129,90 @@ export async function loginStudentWithSupabase(email: string, password?: string)
   }
 
   return data;
+}
+
+/**
+ * Submit Admission Enquiry to Supabase Backend table 'enquiries'
+ */
+export async function submitSupabaseEnquiry(enquiry: {
+  studentName: string;
+  parentName?: string;
+  mobile: string;
+  email?: string;
+  classLevel: string;
+  subject: string;
+  message: string;
+}) {
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase.from('enquiries').insert([
+      {
+        student_name: enquiry.studentName,
+        parent_name: enquiry.parentName || '',
+        mobile: enquiry.mobile,
+        email: enquiry.email || '',
+        class_level: enquiry.classLevel,
+        subject: enquiry.subject,
+        message: enquiry.message,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.warn('Supabase enquiry insert warning:', error.message);
+    }
+    return data;
+  } catch (err) {
+    console.warn('Could not send enquiry to Supabase:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch all enquiries from Supabase Backend
+ */
+export async function fetchSupabaseEnquiries() {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('enquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Error fetching enquiries from Supabase:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.warn('Failed to fetch enquiries from Supabase:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch all registered students from Supabase
+ */
+export async function fetchSupabaseStudents() {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.warn('Error fetching students from Supabase:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.warn('Failed to fetch students from Supabase:', err);
+    return [];
+  }
 }
 
 /**

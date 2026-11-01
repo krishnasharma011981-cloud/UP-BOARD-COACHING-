@@ -29,8 +29,62 @@ import { AdminDashboardView } from './views/AdminDashboardView';
 import { AboutView, ContactView, FaqView, PrivacyView, TermsView } from './views/SupportViews';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<PageView>('home');
+  // Check if URL directly targets /admin
+  const initialIsAdminRoute = () => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    return path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin';
+  };
+
+  const [currentPage, setCurrentPage] = useState<PageView>(() => (initialIsAdminRoute() ? 'admin' : 'home'));
   const [currentUser, setCurrentUser] = useState<StudentUser | null>(() => storageService.getCurrentUser());
+
+  // Dark Theme state with persistence (Default is false = clean white theme)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('upboard_dark_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('upboard_dark_mode', 'true');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('upboard_dark_mode', 'false');
+      }
+    } catch {
+      // ignore
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode((prev) => !prev);
+  };
+
+  // URL listener for /admin and #admin
+  useEffect(() => {
+    const checkAdminRoute = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin') {
+        setCurrentPage('admin');
+      }
+    };
+
+    checkAdminRoute();
+    window.addEventListener('popstate', checkAdminRoute);
+    window.addEventListener('hashchange', checkAdminRoute);
+    return () => {
+      window.removeEventListener('popstate', checkAdminRoute);
+      window.removeEventListener('hashchange', checkAdminRoute);
+    };
+  }, []);
 
   // Data states from storageService
   const [liveClasses, setLiveClasses] = useState<LiveClassItem[]>(() => storageService.getLiveClasses());
@@ -86,14 +140,24 @@ export default function App() {
 
   const isLiveNowActive = liveClasses.some((c) => c.isLiveNow);
 
-  // Scroll to top on page change
+  // Navigation handler with URL sync
   const navigateTo = (page: PageView) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    try {
+      if (page === 'admin') {
+        window.history.pushState(null, '', '/admin');
+      } else if (window.location.pathname === '/admin' || window.location.hash.includes('admin')) {
+        window.history.pushState(null, '', '/');
+      }
+    } catch {
+      // ignore in restricted iframe
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-amber-400 selection:text-slate-950">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-amber-400 selection:text-slate-950 transition-colors">
       
       {/* 1. STICKY TOP NAVBAR */}
       <Navbar
@@ -103,6 +167,8 @@ export default function App() {
         notifications={studentNotifications}
         onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
         isLiveActive={isLiveNowActive}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={toggleDarkMode}
       />
 
       {/* 2. MAIN BODY CONTENT */}
@@ -119,6 +185,7 @@ export default function App() {
             currentUser={currentUser}
             reminders={reminders}
             onToggleReminder={handleToggleReminder}
+            adminSettings={adminSettings}
           />
         )}
 
@@ -128,7 +195,6 @@ export default function App() {
             onOpenPlayer={(item) => setSelectedLiveClass(item)}
             reminders={reminders}
             onToggleReminder={handleToggleReminder}
-            onNavigateToAdmin={() => navigateTo('admin')}
           />
         )}
 
@@ -221,6 +287,7 @@ export default function App() {
           <NotificationsView
             notifications={notifications}
             onNavigate={navigateTo}
+            onRefreshData={refreshAllData}
           />
         )}
 
@@ -243,6 +310,7 @@ export default function App() {
           />
         )}
 
+        {/* ADMIN DASHBOARD VIEW: ONLY ACCESSED VIA /admin or #admin */}
         {currentPage === 'admin' && (
           <AdminDashboardView
             liveClasses={liveClasses}
@@ -252,6 +320,7 @@ export default function App() {
             enquiries={enquiries}
             adminSettings={adminSettings}
             onRefreshData={refreshAllData}
+            onNavigateHome={() => navigateTo('home')}
           />
         )}
 
@@ -273,7 +342,7 @@ export default function App() {
         {currentPage === 'terms' && <TermsView />}
       </main>
 
-      {/* 3. PROFESSIONAL FOOTER */}
+      {/* 3. PROFESSIONAL FOOTER (No admin link) */}
       <Footer
         setCurrentPage={navigateTo}
         onOpenEnquiry={() => setIsEnquiryModalOpen(true)}
@@ -283,7 +352,6 @@ export default function App() {
       <FloatingWhatsApp />
 
       {/* 5. INTERACTIVE MODALS */}
-      {/* Live Player with Simulated Real-Time Chat & Material Downloads */}
       {selectedLiveClass && (
         <LivePlayerModal
           liveClass={selectedLiveClass}
@@ -291,7 +359,6 @@ export default function App() {
         />
       )}
 
-      {/* Interactive Mock Test / Quiz Runner with Timer & Explanations */}
       {selectedQuiz && (
         <MockTestModal
           quiz={selectedQuiz}
@@ -302,7 +369,7 @@ export default function App() {
         />
       )}
 
-      {/* Student Admission & Doubt Enquiry Form Modal */}
+      {/* Student Admission & Doubt Enquiry Form Modal (Connected to Supabase) */}
       <EnquiryModal
         isOpen={isEnquiryModalOpen}
         onClose={() => setIsEnquiryModalOpen(false)}

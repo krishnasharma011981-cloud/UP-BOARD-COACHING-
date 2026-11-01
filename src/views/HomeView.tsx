@@ -32,6 +32,7 @@ import {
   UpNotificationItem,
   StudentUser,
   ClassLevel,
+  AdminSettings,
 } from '../types';
 import {
   HERO_IMAGE,
@@ -55,6 +56,7 @@ interface HomeViewProps {
   currentUser: StudentUser | null;
   reminders: string[];
   onToggleReminder: (id: string) => void;
+  adminSettings?: AdminSettings;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -68,9 +70,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
   currentUser,
   reminders,
   onToggleReminder,
+  adminSettings,
 }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const activeLiveClass = liveClasses.find((c) => c.isLiveNow) || liveClasses[0];
+
+  const featuredVideo = adminSettings?.homeFeaturedVideo || {
+    title: activeLiveClass.title,
+    titleHindi: activeLiveClass.titleHindi,
+    subject: activeLiveClass.subject,
+    classLevel: activeLiveClass.classLevel,
+    teacherName: activeLiveClass.teacherName,
+    youtubeVideoId: activeLiveClass.youtubeVideoId,
+    thumbnailUrl: HERO_IMAGE,
+    isLive: true,
+  };
+
+  const handleOpenFeatured = () => {
+    const itemToOpen: LiveClassItem = {
+      ...activeLiveClass,
+      title: featuredVideo.title,
+      titleHindi: featuredVideo.titleHindi,
+      subject: featuredVideo.subject,
+      classLevel: featuredVideo.classLevel,
+      teacherName: featuredVideo.teacherName,
+      youtubeVideoId: featuredVideo.youtubeVideoId,
+      isLiveNow: featuredVideo.isLive,
+    };
+    onOpenLiveClass(itemToOpen);
+  };
 
   const handleDownload = (item: StudyMaterialItem) => {
     storageService.downloadResource(item.title, item.type === 'ppt' ? 'ppt' : 'pdf', {
@@ -97,10 +125,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span>Dedicated to UP Board Class 9, 10, 11 & 12</span>
               </div>
 
-              {/* Main Headline with Anti-Orphan constraint */}
-              <h1 className="font-heading font-extrabold text-3xl sm:text-5xl lg:text-6xl text-slate-950 tracking-tight leading-[1.1] max-w-2xl mx-auto lg:mx-0">
-                Prepare Smarter. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-900 via-blue-700 to-amber-500">
+              {/* Main Headline with Anti-Orphan constraint & Score Higher in Red */}
+              <h1 className="font-heading font-extrabold text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.1] max-w-2xl mx-auto lg:mx-0">
+                <span className="text-slate-950 dark:text-white">Prepare Smarter.</span> <br />
+                <span className="text-red-600 font-extrabold">
                   Score Higher.
                 </span>
               </h1>
@@ -170,12 +198,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 {/* Glow backdrop */}
                 <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-amber-500 rounded-3xl opacity-20 blur-xl"></div>
 
-                {/* Hero Card Container */}
-                <div className="relative bg-white rounded-2xl p-2.5 shadow-2xl border border-slate-200 overflow-hidden group">
+                {/* Hero Card Container (Managed by Admin) */}
+                <div className="relative bg-white dark:bg-slate-900 rounded-2xl p-2.5 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden group">
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-900">
                     <img
-                      src={HERO_IMAGE}
-                      alt="UP Board students studying in digital classroom"
+                      src={featuredVideo.thumbnailUrl || HERO_IMAGE}
+                      alt={featuredVideo.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -186,7 +214,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     {/* Live Play CTA Overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <button
-                        onClick={() => onOpenLiveClass(activeLiveClass)}
+                        onClick={handleOpenFeatured}
                         className="w-16 h-16 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-2xl shadow-amber-400/50 hover:scale-110 active:scale-95 transition-all cursor-pointer"
                         aria-label="Play current active live class"
                       >
@@ -197,21 +225,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     {/* Bottom Floating Info */}
                     <div className="absolute bottom-3 left-3 right-3 text-white">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 tracking-wider uppercase">
-                          LIVE STREAM
-                        </span>
+                        {featuredVideo.isLive && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 tracking-wider uppercase">
+                            LIVE STREAM
+                          </span>
+                        )}
                         <span className="text-xs text-slate-300">
-                          {activeLiveClass.subject} · {activeLiveClass.classLevel}
+                          {featuredVideo.subject} · {featuredVideo.classLevel}
                         </span>
                       </div>
                       <p className="text-xs font-semibold line-clamp-1 text-slate-100">
-                        {activeLiveClass.title}
+                        {featuredVideo.title}
                       </p>
                     </div>
                   </div>
 
                   {/* Card Micro Details */}
-                  <div className="p-3 bg-slate-50 rounded-xl mt-2 flex items-center justify-between text-xs">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl mt-2 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2.5">
                       <img
                         src={LOGO_IMAGE}
@@ -219,12 +249,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         className="w-9 h-9 rounded-full object-contain border border-amber-400 shadow-xs shrink-0"
                       />
                       <div>
-                        <p className="font-semibold text-slate-900">UP BOARD COACHING Live</p>
-                        <p className="text-[10px] text-slate-500">{activeLiveClass.teacherName}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">UP BOARD COACHING Live</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">{featuredVideo.teacherName}</p>
                       </div>
                     </div>
                     <button
-                      onClick={() => onOpenLiveClass(activeLiveClass)}
+                      onClick={handleOpenFeatured}
                       className="px-3 py-1.5 rounded-lg bg-blue-950 hover:bg-blue-800 text-white text-xs font-semibold cursor-pointer"
                     >
                       Join Class &rarr;
@@ -405,8 +435,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 12th
               </div>
               <div>
-                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-blue-700 transition-colors">
-                  Class 12 Intermediate
+                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-blue-700 transition-colors capitalize">
+                  12 - senior secondary
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Physics, Chemistry, Mathematics, Biology & Hindi
@@ -433,7 +463,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => onNavigate('class-12')}
                 className="w-full py-2.5 px-4 rounded-xl bg-blue-950 hover:bg-blue-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                <span>Open Class 12 Hub</span>
+                <span>Open 12 - senior secondary Hub</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -446,8 +476,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 11th
               </div>
               <div>
-                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-cyan-700 transition-colors">
-                  Class 11 Science & Arts
+                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-cyan-700 transition-colors capitalize">
+                  11 - pre senior secondary
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Kinematics, Organic Basics, Vectors & Grammar
@@ -474,7 +504,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => onNavigate('class-11')}
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                <span>Open Class 11 Hub</span>
+                <span>Open 11 - pre senior secondary Hub</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -487,8 +517,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 10th
               </div>
               <div>
-                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-emerald-700 transition-colors">
-                  Class 10 High School
+                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-emerald-700 transition-colors capitalize">
+                  10 - secondary
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Math, Science, Social Science, Hindi & English
@@ -515,7 +545,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => onNavigate('class-10')}
                 className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                <span>Open Class 10 Hub</span>
+                <span>Open 10 - secondary Hub</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -528,8 +558,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 9th
               </div>
               <div>
-                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-amber-700 transition-colors">
-                  Class 9 Foundation
+                <h3 className="font-heading font-bold text-lg text-slate-900 group-hover:text-amber-700 transition-colors capitalize">
+                  9 - pre secondary
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Mathematics, Science & Basic Hindi/English
@@ -556,7 +586,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => onNavigate('class-9')}
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
-                <span>Open Class 9 Hub</span>
+                <span>Open 9 - pre secondary Hub</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

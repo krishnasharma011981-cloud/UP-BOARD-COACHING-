@@ -26,6 +26,13 @@ interface CoursesViewProps {
 export const CoursesView: React.FC<CoursesViewProps> = ({ onNavigate, onOpenEnquiry }) => {
   const [selectedLevel, setSelectedLevel] = useState<ClassLevel>('Class 12');
 
+  const classDisplayNames: Record<ClassLevel, string> = {
+    'Class 12': '12 - senior secondary',
+    'Class 11': '11 - pre senior secondary',
+    'Class 10': '10 - secondary',
+    'Class 9': '9 - pre secondary',
+  };
+
   const filteredSubjects = SUBJECTS_DATA.filter((s) => s.classLevel === selectedLevel);
 
   return (
@@ -44,7 +51,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({ onNavigate, onOpenEnqu
         </p>
 
         {/* Level Switcher */}
-        <div className="pt-4 flex items-center justify-center gap-2">
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-2">
           {(['Class 12', 'Class 11', 'Class 10', 'Class 9'] as const).map((level) => (
             <button
               key={level}
@@ -55,7 +62,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({ onNavigate, onOpenEnqu
                   : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              {level}
+              {classDisplayNames[level]}
             </button>
           ))}
         </div>
@@ -65,8 +72,8 @@ export const CoursesView: React.FC<CoursesViewProps> = ({ onNavigate, onOpenEnqu
       <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
           <div>
-            <h2 className="text-2xl font-heading font-bold text-slate-900">
-              {selectedLevel} Complete Board Syllabus Overview
+            <h2 className="text-2xl font-heading font-bold text-slate-900 capitalize">
+              {classDisplayNames[selectedLevel]} Syllabus Overview
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Includes full video lectures, chapter notes, PPTs, model test papers and teacher mentorship.
@@ -82,7 +89,7 @@ export const CoursesView: React.FC<CoursesViewProps> = ({ onNavigate, onOpenEnqu
             }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs transition-colors shrink-0 cursor-pointer"
           >
-            <span>Enter {selectedLevel} Portal</span>
+            <span className="capitalize">Enter {classDisplayNames[selectedLevel]} Portal</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

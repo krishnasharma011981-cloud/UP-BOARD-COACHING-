@@ -13,6 +13,7 @@ import {
   EnquiryItem,
   AdminSettings,
   ClassLevel,
+  PracticeQuizQuestion,
 } from '../types';
 import {
   INITIAL_ADMIN_SETTINGS,
@@ -23,6 +24,8 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_ENQUIRIES,
 } from '../data/mockData';
+import { FIFTY_LIVE_QUIZZES, FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
+import { submitSupabaseEnquiry } from '../lib/supabase';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'upboard_current_user',
@@ -35,6 +38,7 @@ const STORAGE_KEYS = {
   ENQUIRIES: 'upboard_enquiries',
   ADMIN_SETTINGS: 'upboard_admin_settings',
   REMINDERS: 'upboard_live_reminders',
+  DAILY_QUIZZES: 'upboard_daily_quizzes_50',
 };
 
 // Default guest / demo student
@@ -63,6 +67,20 @@ export const DEMO_STUDENT: StudentUser = {
   createdAt: '2026-09-01',
 };
 
+const DEFAULT_ADMIN_SETTINGS_WITH_VIDEO: AdminSettings = {
+  ...INITIAL_ADMIN_SETTINGS,
+  homeFeaturedVideo: {
+    title: 'Class 12 Physics: Electrostatics & Coulomb’s Law Full Chapter Revision',
+    titleHindi: 'कक्षा 12 भौतिक विज्ञान: वैद्युत आवेश एवं क्षेत्र - सम्पूर्ण महामैराथन 1 Shot',
+    subject: 'Physics',
+    classLevel: 'Class 12',
+    teacherName: 'Er. Rakesh Sharma',
+    youtubeVideoId: 'jfKfPfyJRdk',
+    thumbnailUrl: '/src/assets/images/hero_upboard_students_1793429396730.jpg',
+    isLive: true,
+  },
+};
+
 class StorageService {
   private safeGet<T>(key: string, fallback: T): T {
     try {
@@ -89,6 +107,10 @@ class StorageService {
 
   setCurrentUser(user: StudentUser | null): void {
     this.safeSet(STORAGE_KEYS.CURRENT_USER, user);
+  }
+
+  getAllUsers(): StudentUser[] {
+    return this.safeGet<StudentUser[]>(STORAGE_KEYS.ALL_USERS, [DEMO_STUDENT]);
   }
 
   registerUser(details: {
@@ -215,6 +237,12 @@ class StorageService {
     this.saveLiveClasses([item, ...current]);
   }
 
+  updateLiveClass(item: LiveClassItem): void {
+    const current = this.getLiveClasses();
+    const updated = current.map((c) => (c.id === item.id ? item : c));
+    this.saveLiveClasses(updated);
+  }
+
   deleteLiveClass(id: string): void {
     const current = this.getLiveClasses();
     this.saveLiveClasses(current.filter((c) => c.id !== id));
@@ -244,7 +272,7 @@ class StorageService {
     return !exists;
   }
 
-  // --- Study Materials ---
+  // --- Study Materials (Notes, PPTs, Solutions) ---
   getStudyMaterials(): StudyMaterialItem[] {
     return this.safeGet<StudyMaterialItem[]>(STORAGE_KEYS.STUDY_MATERIALS, STUDY_MATERIALS_DATA);
   }
@@ -262,7 +290,7 @@ class StorageService {
     );
   }
 
-  // --- Question Papers ---
+  // --- Question Papers (PYQ) ---
   getQuestionPapers(): QuestionPaperItem[] {
     return this.safeGet<QuestionPaperItem[]>(STORAGE_KEYS.QUESTION_PAPERS, QUESTION_PAPERS_DATA);
   }
@@ -270,6 +298,14 @@ class StorageService {
   addQuestionPaper(item: QuestionPaperItem): void {
     const current = this.getQuestionPapers();
     this.safeSet(STORAGE_KEYS.QUESTION_PAPERS, [item, ...current]);
+  }
+
+  deleteQuestionPaper(id: string): void {
+    const current = this.getQuestionPapers();
+    this.safeSet(
+      STORAGE_KEYS.QUESTION_PAPERS,
+      current.filter((p) => p.id !== id)
+    );
   }
 
   // --- UPMSP Notifications ---
@@ -320,6 +356,18 @@ class StorageService {
     };
     const current = this.getEnquiries();
     this.safeSet(STORAGE_KEYS.ENQUIRIES, [newEnquiry, ...current]);
+
+    // Send asynchronously to Supabase backend table 'enquiries'
+    submitSupabaseEnquiry({
+      studentName: enquiry.studentName,
+      parentName: enquiry.parentName,
+      mobile: enquiry.mobile,
+      email: enquiry.email,
+      classLevel: enquiry.classLevel,
+      subject: enquiry.subject,
+      message: enquiry.message,
+    }).catch((err) => console.warn('Supabase async enquiry error:', err));
+
     return newEnquiry;
   }
 
@@ -329,22 +377,67 @@ class StorageService {
     this.safeSet(STORAGE_KEYS.ENQUIRIES, updated);
   }
 
+  deleteEnquiry(id: string): void {
+    const current = this.getEnquiries();
+    this.safeSet(
+      STORAGE_KEYS.ENQUIRIES,
+      current.filter((e) => e.id !== id)
+    );
+  }
+
+  // --- Daily 50 Quizzes ---
+  getDailyQuizzes(): FiftyQuizQuestion[] {
+    return this.safeGet<FiftyQuizQuestion[]>(STORAGE_KEYS.DAILY_QUIZZES, FIFTY_LIVE_QUIZZES);
+  }
+
+  saveDailyQuizzes(questions: FiftyQuizQuestion[]): void {
+    this.safeSet(STORAGE_KEYS.DAILY_QUIZZES, questions);
+  }
+
+  updateDailyQuizQuestion(index: number, question: FiftyQuizQuestion): void {
+    const quizzes = [...this.getDailyQuizzes()];
+    if (index >= 0 && index < quizzes.length) {
+      quizzes[index] = question;
+      this.saveDailyQuizzes(quizzes);
+    }
+  }
+
+  addDailyQuizQuestion(question: FiftyQuizQuestion): void {
+    const quizzes = [...this.getDailyQuizzes()];
+    quizzes.push(question);
+    this.saveDailyQuizzes(quizzes);
+  }
+
+  deleteDailyQuizQuestion(index: number): void {
+    const quizzes = [...this.getDailyQuizzes()];
+    if (index >= 0 && index < quizzes.length) {
+      quizzes.splice(index, 1);
+      this.saveDailyQuizzes(quizzes);
+    }
+  }
+
   // --- Admin Settings ---
   getAdminSettings(): AdminSettings {
-    return this.safeGet<AdminSettings>(STORAGE_KEYS.ADMIN_SETTINGS, INITIAL_ADMIN_SETTINGS);
+    return this.safeGet<AdminSettings>(STORAGE_KEYS.ADMIN_SETTINGS, DEFAULT_ADMIN_SETTINGS_WITH_VIDEO);
   }
 
   saveAdminSettings(settings: AdminSettings): void {
     this.safeSet(STORAGE_KEYS.ADMIN_SETTINGS, settings);
   }
 
+  updateHomeFeaturedVideo(video: NonNullable<AdminSettings['homeFeaturedVideo']>): void {
+    const settings = this.getAdminSettings();
+    settings.homeFeaturedVideo = video;
+    this.saveAdminSettings(settings);
+  }
+
   // --- Download Simulation Helper ---
   downloadResource(title: string, type: 'pdf' | 'ppt' | 'notes', details: Record<string, any> = {}): void {
     const formattedContent = `
 ============================================================
-  UP BOARD COCHING - YOUR SUCCESS, OUR MISSION
+  UP BOARD COACHING - YOUR SUCCESS, OUR MISSION
   Official Study Material & Student Resource Portal
-  Website: https://upboardcoaching.in | YouTube: @UPBoardCoching
+  Website: https://upboardcoaching.netlify.app | YouTube: @UPBoard_Coaching
 ============================================================
 
 Title: ${title}
@@ -367,9 +460,9 @@ STUDY INSTRUCTIONS:
 3. For Class 12: Maintain clean steps in mathematical and physics numericals.
 
 Subscribe to our YouTube Channel for daily free live lectures:
-https://youtube.com/@UPBoardCoching
+https://www.youtube.com/@UPBoard_Coaching
 
-(c) UP BOARD COCHING. All Rights Reserved.
+(c) UP BOARD COACHING. All Rights Reserved.
 ============================================================
     `.trim();
 
@@ -378,7 +471,7 @@ https://youtube.com/@UPBoardCoching
     const anchor = document.createElement('a');
     anchor.href = url;
     const cleanFileName = title.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 40);
-    anchor.download = `UP_BOARD_COCHING_${cleanFileName}.${type === 'ppt' ? 'pptx.txt' : 'pdf.txt'}`;
+    anchor.download = `UP_BOARD_COACHING_${cleanFileName}.${type === 'ppt' ? 'pptx.txt' : 'pdf.txt'}`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);

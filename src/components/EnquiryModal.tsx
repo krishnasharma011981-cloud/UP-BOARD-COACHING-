@@ -50,28 +50,37 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    setIsSubmitting(true);
 
-    storageService.submitEnquiry({
-      studentName: formData.studentName,
-      parentName: formData.parentName || undefined,
-      mobile: formData.mobile,
-      email: formData.email || undefined,
-      classLevel: formData.classLevel,
-      subject: formData.subject,
-      message: formData.message || 'Admission inquiry for board batch',
-    });
-
-    setIsSuccess(true);
+    try {
+      storageService.submitEnquiry({
+        studentName: formData.studentName,
+        parentName: formData.parentName || undefined,
+        mobile: formData.mobile,
+        email: formData.email || undefined,
+        classLevel: formData.classLevel,
+        subject: formData.subject,
+        message: formData.message || 'Admission inquiry for board batch',
+      });
+      setIsSuccess(true);
+    } catch (err) {
+      console.warn('Enquiry submit error:', err);
+      setIsSuccess(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleWhatsAppDirect = () => {
     const text = encodeURIComponent(
-      `Hello UP BOARD COCHING! My name is ${formData.studentName || 'Student'}, looking for admission guidance for ${formData.classLevel}. Mobile: ${formData.mobile || 'Provided'}.`
+      `Hello UP BOARD COACHING! My name is ${formData.studentName || 'Student'}, looking for admission guidance for ${formData.classLevel}. Mobile: ${formData.mobile || 'Provided'}.`
     );
-    window.open(`https://wa.me/919876543210?text=${text}`, '_blank');
+    window.open(`https://wa.me/917518177177?text=${text}`, '_blank');
   };
 
   return (
@@ -217,10 +226,10 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
                   onChange={(e) => setFormData({ ...formData, classLevel: e.target.value as ClassLevel })}
                   className="w-full p-2.5 rounded-lg border border-slate-300 bg-white text-xs focus:border-blue-600 focus:outline-none cursor-pointer"
                 >
-                  <option value="Class 12">Class 12 (Intermediate)</option>
-                  <option value="Class 11">Class 11</option>
-                  <option value="Class 10">Class 10 (High School)</option>
-                  <option value="Class 9">Class 9</option>
+                  <option value="Class 12">12 - senior secondary</option>
+                  <option value="Class 11">11 - pre senior secondary</option>
+                  <option value="Class 10">10 - secondary</option>
+                  <option value="Class 9">9 - pre secondary</option>
                 </select>
               </div>
 

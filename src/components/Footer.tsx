@@ -105,23 +105,23 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage, onOpenEnquiry })
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li>
-                <button onClick={() => navigate('class-12')} className="hover:text-amber-400 transition-colors cursor-pointer">
-                  Class 12 Intermediate (Board)
+                <button onClick={() => navigate('class-12')} className="hover:text-amber-400 transition-colors cursor-pointer capitalize">
+                  12 - senior secondary
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('class-11')} className="hover:text-amber-400 transition-colors cursor-pointer">
-                  Class 11 Science & Arts
+                <button onClick={() => navigate('class-11')} className="hover:text-amber-400 transition-colors cursor-pointer capitalize">
+                  11 - pre senior secondary
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('class-10')} className="hover:text-amber-400 transition-colors cursor-pointer">
-                  Class 10 High School (Board)
+                <button onClick={() => navigate('class-10')} className="hover:text-amber-400 transition-colors cursor-pointer capitalize">
+                  10 - secondary
                 </button>
               </li>
               <li>
-                <button onClick={() => navigate('class-9')} className="hover:text-amber-400 transition-colors cursor-pointer">
-                  Class 9 Foundation
+                <button onClick={() => navigate('class-9')} className="hover:text-amber-400 transition-colors cursor-pointer capitalize">
+                  9 - pre secondary
                 </button>
               </li>
               <li>

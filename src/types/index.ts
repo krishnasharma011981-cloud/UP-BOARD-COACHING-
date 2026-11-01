@@ -177,6 +177,19 @@ export interface StudentNotificationItem {
   actionUrl?: string;
 }
 
+export interface ChapterItem {
+  id: string;
+  chapterNumber: number;
+  title: string;
+  titleHindi: string;
+  subjectCode: string;
+  classLevel: ClassLevel;
+  topics: string[];
+  youtubeVideoId: string;
+  youtubeUrl?: string;
+  duration?: string;
+}
+
 export interface AdminSettings {
   youtubeChannelId: string;
   youtubeChannelHandle: string;
@@ -185,4 +198,14 @@ export interface AdminSettings {
   emergencyBannerActive: boolean;
   examDateIso: string;
   examTitle: string;
+  homeFeaturedVideo?: {
+    title: string;
+    titleHindi: string;
+    subject: string;
+    classLevel: ClassLevel;
+    teacherName: string;
+    youtubeVideoId: string;
+    thumbnailUrl?: string;
+    isLive: boolean;
+  };
 }

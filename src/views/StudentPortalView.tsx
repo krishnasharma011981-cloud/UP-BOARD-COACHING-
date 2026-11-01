@@ -91,7 +91,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
     setAuthError(null);
 
     try {
-      if (isSupabaseConfigured() && loginIdentifier.includes('@')) {
+      if (isSupabaseConfigured()) {
         await loginStudentWithSupabase(loginIdentifier.trim(), loginPassword);
       }
       const user = storageService.loginUser(loginIdentifier.trim());
@@ -118,11 +118,11 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
     setAuthError(null);
 
     try {
-      if (isSupabaseConfigured() && regIdentifier.includes('@')) {
+      if (isSupabaseConfigured()) {
         await registerStudentWithSupabase({
           fullName: regName.trim(),
-          email: regIdentifier.trim(),
-          mobile: regIdentifier.includes('@') ? '7518177177' : regIdentifier.trim(),
+          email: regIdentifier.includes('@') ? regIdentifier.trim() : `student_${regIdentifier.replace(/\D/g, '')}@upboard.in`,
+          mobile: regIdentifier.replace(/\D/g, '') || '7518177177',
           password: regPassword || 'UpBoard@2027',
           classLevel: regClass,
           district: regDistrict.trim(),
@@ -194,7 +194,15 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold uppercase tracking-wider">
                   Verified Student
                 </span>
-                <span className="text-slate-300 font-semibold">{currentUser.classLevel}</span>
+                <span className="text-slate-300 font-semibold capitalize">
+                  {currentUser.classLevel === 'Class 12'
+                    ? '12 - senior secondary'
+                    : currentUser.classLevel === 'Class 11'
+                    ? '11 - pre senior secondary'
+                    : currentUser.classLevel === 'Class 10'
+                    ? '10 - secondary'
+                    : '9 - pre secondary'}
+                </span>
                 <span className="text-slate-400">·</span>
                 <span className="text-slate-400">Target Board Exam: {currentUser.targetExamYear}</span>
               </div>
@@ -665,10 +673,10 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
                     onChange={(e) => setRegClass(e.target.value as ClassLevel)}
                     className="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-xs focus:outline-none"
                   >
-                    <option value="Class 12">Class 12 (Board)</option>
-                    <option value="Class 11">Class 11</option>
-                    <option value="Class 10">Class 10 (Board)</option>
-                    <option value="Class 9">Class 9</option>
+                    <option value="Class 12">12 - senior secondary</option>
+                    <option value="Class 11">11 - pre senior secondary</option>
+                    <option value="Class 10">10 - secondary</option>
+                    <option value="Class 9">9 - pre secondary</option>
                   </select>
                 </div>
 

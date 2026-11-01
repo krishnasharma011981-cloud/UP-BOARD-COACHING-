@@ -23,6 +23,9 @@ import {
   Compass,
   Bookmark,
   Share2,
+  Play,
+  Youtube,
+  ExternalLink,
 } from 'lucide-react';
 import {
   ClassLevel,
@@ -34,6 +37,7 @@ import {
 } from '../types';
 import { SUBJECTS_DATA, PRACTICE_QUIZZES_DATA } from '../data/mockData';
 import { storageService } from '../services/storageService';
+import { getChaptersBySubject, getChapterYouTubeLink, ChapterItem } from '../data/chaptersData';
 
 interface ClassDetailViewProps {
   classLevel: ClassLevel;
@@ -58,9 +62,61 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
 }) => {
   const subjects = SUBJECTS_DATA.filter((s) => s.classLevel === classLevel);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
-  const [activeTab, setActiveTab] = useState<'notes' | 'ppt' | 'qa' | 'quizzes' | 'schedule'>('notes');
+  const [activeTab, setActiveTab] = useState<'chapters' | 'notes' | 'ppt' | 'qa' | 'quizzes' | 'schedule'>('chapters');
 
   const currentSubject = subjects.find((s) => s.id === selectedSubjectId) || subjects[0];
+
+  // Retrieve curated chapters or generate fallback syllabus chapters
+  const subjectChapters: ChapterItem[] = (() => {
+    if (!currentSubject) return [];
+    const directList = getChaptersBySubject(classLevel, currentSubject.code);
+    if (directList.length > 0) return directList;
+
+    // Fallback generation matching subject totalChapters so every single subject has all chapters
+    const count = currentSubject.totalChapters || 10;
+    const generated: ChapterItem[] = [];
+    for (let i = 1; i <= count; i++) {
+      generated.push({
+        id: `${currentSubject.code.toLowerCase()}-ch-${i}`,
+        chapterNumber: i,
+        title: `${currentSubject.name} Chapter ${i}`,
+        titleHindi: `${currentSubject.nameHindi} अध्याय ${i}`,
+        subjectCode: currentSubject.code,
+        classLevel: classLevel,
+        topics: ['Complete UPMSP NCERT Syllabus', 'Important Board Theory', 'Previous Years Q&A'],
+        youtubeVideoId: 'jfKfPfyJRdk',
+        duration: '1h 30m',
+      });
+    }
+    return generated;
+  })();
+
+  const handleWatchOnYouTube = (ch: ChapterItem) => {
+    const url = getChapterYouTubeLink(ch);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handlePlayChapterInApp = (ch: ChapterItem) => {
+    onOpenLiveLecture({
+      id: ch.id,
+      title: `${ch.classLevel} ${currentSubject.name}: Chapter ${ch.chapterNumber} - ${ch.title}`,
+      titleHindi: `${ch.titleHindi} - सम्पूर्ण अध्याय`,
+      subject: currentSubject.name,
+      classLevel: classLevel,
+      teacherName: 'UP Board Senior Faculty',
+      teacherRole: 'Subject Specialist',
+      date: 'Chapter Lecture',
+      time: ch.duration || 'Full Chapter',
+      scheduledDateTime: new Date().toISOString(),
+      durationMinutes: 90,
+      isLiveNow: false,
+      isCompleted: true,
+      youtubeVideoId: ch.youtubeVideoId || 'jfKfPfyJRdk',
+      viewersCount: 15400,
+      description: `Complete UPMSP syllabus revision for Chapter ${ch.chapterNumber}: ${ch.title} (${ch.titleHindi}). Covered topics: ${ch.topics.join(', ')}.`,
+      chapterTopic: `Chapter ${ch.chapterNumber}: ${ch.title}`,
+    });
+  };
 
   const classMaterials = studyMaterials.filter(
     (m) => m.classLevel === classLevel && (currentSubject ? m.subject.toLowerCase().includes(currentSubject.name.toLowerCase()) || currentSubject.name.toLowerCase().includes(m.subject.toLowerCase()) : true)
@@ -81,6 +137,13 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
     });
   };
 
+  const classDisplayNames: Record<ClassLevel, string> = {
+    'Class 12': '12 - senior secondary',
+    'Class 11': '11 - pre senior secondary',
+    'Class 10': '10 - secondary',
+    'Class 9': '9 - pre secondary',
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
       
@@ -93,12 +156,12 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
             UPMSP Curriculum Hub
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-white tracking-tight">
-            {classLevel} Complete Preparation Portal
+          <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-white tracking-tight capitalize">
+            {classDisplayNames[classLevel] || classLevel} Complete Preparation Portal
           </h1>
 
           <p className="text-sm text-slate-300 leading-relaxed">
-            Everything you need to score 95%+ in {classLevel}: NCERT chapter notes, downloadable PPT slides, important questions & answers, embedded YouTube video lectures, and practice mock tests.
+            Everything you need to score 95%+ in {classDisplayNames[classLevel] || classLevel}: NCERT chapter notes, downloadable PPT slides, important questions & answers, embedded YouTube video lectures, and practice mock tests.
           </p>
 
           <div className="pt-2 flex flex-wrap gap-4 text-xs text-slate-300 font-medium">
@@ -118,28 +181,36 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
         </div>
       </div>
 
-      {/* Subject Selector Bar */}
+      {/* Subject Selector Bar (As shown in Image 5) */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-          Select Subject:
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            SELECT SUBJECT:
+          </h3>
+          <span className="text-xs text-blue-700 dark:text-amber-400 font-medium">
+            Click any subject card to view chapters & YouTube videos
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
           {subjects.map((subj) => {
             const isSelected = selectedSubjectId === subj.id;
             return (
               <button
                 key={subj.id}
-                onClick={() => setSelectedSubjectId(subj.id)}
-                className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                onClick={() => {
+                  setSelectedSubjectId(subj.id);
+                  setActiveTab('chapters');
+                }}
+                className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between hover:scale-[1.02] ${
                   isSelected
-                    ? 'bg-blue-950 text-white border-blue-900 shadow-md shadow-blue-950/20'
-                    : 'bg-white text-slate-800 border-slate-200 hover:border-slate-300'
+                    ? 'bg-blue-950 text-white border-blue-900 shadow-lg shadow-blue-950/20 ring-2 ring-amber-400/50'
+                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-slate-300'
                 }`}
               >
                 <div>
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      isSelected ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 text-slate-600'
+                      isSelected ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                     }`}
                   >
                     {subj.code}
@@ -148,8 +219,8 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
                     {subj.name}
                   </h4>
                   <p
-                    className={`text-xs mt-0.5 ${
-                      isSelected ? 'text-slate-300' : 'text-slate-500'
+                    className={`text-xs mt-0.5 line-clamp-1 ${
+                      isSelected ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {subj.nameHindi}
@@ -157,7 +228,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
                 </div>
                 <div
                   className={`text-[11px] font-medium pt-2 border-t mt-3 ${
-                    isSelected ? 'border-white/10 text-amber-300' : 'border-slate-100 text-slate-400'
+                    isSelected ? 'border-white/10 text-amber-300' : 'border-slate-100 dark:border-slate-800 text-slate-400'
                   }`}
                 >
                   {subj.totalChapters} Chapters
@@ -169,13 +240,26 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
       </div>
 
       {/* Sub-Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1 text-xs font-semibold">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1 text-xs font-semibold">
+        {/* Chapters & YouTube Videos Tab */}
+        <button
+          onClick={() => setActiveTab('chapters')}
+          className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'chapters'
+              ? 'bg-red-600 text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Youtube className="w-4 h-4 text-white" />
+          <span>Chapters & YouTube Videos ({subjectChapters.length})</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('notes')}
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'notes'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -187,7 +271,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'ppt'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <Presentation className="w-4 h-4" />
@@ -199,7 +283,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'qa'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <HelpCircle className="w-4 h-4" />
@@ -211,7 +295,7 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'quizzes'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -223,13 +307,111 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
           className={`px-4 py-2.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'schedule'
               ? 'bg-blue-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <Clock className="w-4 h-4" />
           <span>Subject Study Timetable</span>
         </button>
       </div>
+
+      {/* TAB CONTENT */}
+
+      {/* 0. CHAPTERS & YOUTUBE VIDEOS TAB (Primary) */}
+      {activeTab === 'chapters' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gradient-to-r from-red-950 via-slate-900 to-slate-900 p-5 rounded-2xl text-white border border-red-800/40">
+            <div>
+              <div className="flex items-center gap-2 text-xs text-red-400 font-semibold mb-1">
+                <Youtube className="w-4 h-4 text-red-500" />
+                <span>UP BOARD OFFICIAL CHAPTER LECTURES</span>
+              </div>
+              <h3 className="font-heading font-bold text-lg text-white">
+                {currentSubject?.name} ({currentSubject?.nameHindi}) — All Chapters & Video Lectures
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Click any chapter to open the complete UP Board YouTube lecture video or play inside app!
+              </p>
+            </div>
+            <a
+              href="https://www.youtube.com/@UPBoard_Coaching"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-md shrink-0"
+            >
+              <Youtube className="w-4 h-4" />
+              <span>Subscribe on YouTube</span>
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subjectChapters.map((ch) => (
+              <div
+                key={ch.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-lg transition-all flex flex-col justify-between group hover:border-red-300 dark:hover:border-red-800"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 font-bold text-[11px]">
+                      Chapter {ch.chapterNumber}
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-400">
+                      {ch.duration || '90 mins'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-heading font-bold text-base text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-snug">
+                      {ch.title}
+                    </h4>
+                    <p className="text-xs font-semibold text-blue-900 dark:text-amber-400 mt-0.5">
+                      {ch.titleHindi}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 pt-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Important Topics:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {ch.topics.map((top: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px]"
+                        >
+                          {top}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 mt-4">
+                  {/* YouTube Direct Button */}
+                  <button
+                    onClick={() => handleWatchOnYouTube(ch)}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    title="Open UP Board chapter video on YouTube"
+                  >
+                    <Youtube className="w-3.5 h-3.5" />
+                    <span>Watch on YouTube</span>
+                    <ExternalLink className="w-3 h-3 ml-0.5 opacity-80" />
+                  </button>
+
+                  {/* In-App Player Button */}
+                  <button
+                    onClick={() => handlePlayChapterInApp(ch)}
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                    title="Play Video in Player"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* TAB CONTENT */}
 

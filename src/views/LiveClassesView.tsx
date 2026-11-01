@@ -28,7 +28,7 @@ interface LiveClassesViewProps {
   onOpenPlayer: (item: LiveClassItem) => void;
   reminders: string[];
   onToggleReminder: (id: string) => void;
-  onNavigateToAdmin: () => void;
+  onNavigateToAdmin?: () => void;
 }
 
 export const LiveClassesView: React.FC<LiveClassesViewProps> = ({
@@ -350,19 +350,7 @@ export const LiveClassesView: React.FC<LiveClassesViewProps> = ({
         </div>
       </section>
 
-      {/* Admin Connection Callout */}
-      <div className="p-4 bg-slate-100 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-        <div>
-          <span className="font-semibold text-slate-900">Are you an administrator?</span>{' '}
-          Connect your official YouTube Data API and Channel ID (@UPBoard_Coaching) in Admin Settings to stream directly to students.
-        </div>
-        <button
-          onClick={onNavigateToAdmin}
-          className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold shrink-0 cursor-pointer"
-        >
-          Open Admin Settings &rarr;
-        </button>
-      </div>
+
 
     </div>
   );

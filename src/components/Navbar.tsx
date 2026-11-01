@@ -12,7 +12,8 @@ import {
   User,
   Menu,
   X,
-  Shield,
+  Moon,
+  Sun,
   GraduationCap,
   Sparkles,
   Download,
@@ -27,6 +28,8 @@ interface NavbarProps {
   notifications: StudentNotificationItem[];
   onOpenNotifications: () => void;
   isLiveActive: boolean;
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -36,6 +39,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   notifications,
   onOpenNotifications,
   isLiveActive,
+  isDarkMode = false,
+  onToggleDarkMode,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [classesDropdownOpen, setClassesDropdownOpen] = useState(false);
@@ -134,28 +139,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => navigateTo('class-12')}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-blue-700 cursor-pointer flex items-center justify-between"
                   >
-                    <span>Class 12 Intermediate</span>
+                    <span className="font-medium">12 - senior secondary</span>
                     <span className="text-[10px] text-slate-400">Board Exam</span>
                   </button>
                   <button
                     onClick={() => navigateTo('class-11')}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-blue-700 cursor-pointer flex items-center justify-between"
                   >
-                    <span>Class 11 Science & Arts</span>
+                    <span className="font-medium">11 - pre senior secondary</span>
                     <span className="text-[10px] text-slate-400">Foundation</span>
                   </button>
                   <button
                     onClick={() => navigateTo('class-10')}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-blue-700 cursor-pointer flex items-center justify-between"
                   >
-                    <span>Class 10 High School</span>
+                    <span className="font-medium">10 - secondary</span>
                     <span className="text-[10px] text-slate-400">Board Exam</span>
                   </button>
                   <button
                     onClick={() => navigateTo('class-9')}
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-blue-700 cursor-pointer flex items-center justify-between"
                   >
-                    <span>Class 9 Foundation</span>
+                    <span className="font-medium">9 - pre secondary</span>
                     <span className="text-[10px] text-slate-400">Basics</span>
                   </button>
                 </div>
@@ -234,16 +239,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Admin Toggle Shortcut */}
-            <button
-              onClick={() => navigateTo('admin')}
-              title="Admin Console"
-              className={`p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer ${
-                currentPage === 'admin' ? 'bg-slate-100 text-slate-900' : ''
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-            </button>
+
+
+            {/* Dark Theme Toggle Button */}
+            {onToggleDarkMode && (
+              <button
+                onClick={onToggleDarkMode}
+                title={isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+                className="p-2 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Toggle dark theme"
+              >
+                {isDarkMode ? (
+                  <Sun className="w-5 h-5 text-amber-400" />
+                ) : (
+                  <Moon className="w-5 h-5 text-slate-600" />
+                )}
+              </button>
+            )}
 
             {/* Primary Action Button: Student Portal */}
             <button
@@ -273,25 +285,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => navigateTo('class-12')}
                 className="p-2.5 bg-blue-50 text-blue-900 rounded-lg text-xs font-semibold text-left cursor-pointer"
               >
-                Class 12 (Board)
+                12 - senior secondary
               </button>
               <button
                 onClick={() => navigateTo('class-10')}
                 className="p-2.5 bg-emerald-50 text-emerald-900 rounded-lg text-xs font-semibold text-left cursor-pointer"
               >
-                Class 10 (Board)
+                10 - secondary
               </button>
               <button
                 onClick={() => navigateTo('class-11')}
                 className="p-2.5 bg-purple-50 text-purple-900 rounded-lg text-xs font-semibold text-left cursor-pointer"
               >
-                Class 11 Science
+                11 - pre senior secondary
               </button>
               <button
                 onClick={() => navigateTo('class-9')}
                 className="p-2.5 bg-amber-50 text-amber-900 rounded-lg text-xs font-semibold text-left cursor-pointer"
               >
-                Class 9 Foundation
+                9 - pre secondary
               </button>
             </div>
 
