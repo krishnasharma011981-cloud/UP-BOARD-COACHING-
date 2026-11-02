@@ -27,6 +27,7 @@ import { StudentPortalView } from './views/StudentPortalView';
 import { LiveQuizView } from './views/LiveQuizView';
 import { AdminDashboardView } from './views/AdminDashboardView';
 import { AboutView, ContactView, FaqView, PrivacyView, TermsView } from './views/SupportViews';
+import { upmspService } from './services/upmspService';
 
 export default function App() {
   // Check if URL directly targets /admin
@@ -91,6 +92,16 @@ export default function App() {
   const [studyMaterials, setStudyMaterials] = useState(() => storageService.getStudyMaterials());
   const [questionPapers, setQuestionPapers] = useState(() => storageService.getQuestionPapers());
   const [notifications, setNotifications] = useState(() => storageService.getNotifications());
+
+  // Auto-subscribe to real-time UPMSP updates from upmspService
+  useEffect(() => {
+    const unsubscribe = upmspService.subscribe((liveNotifs) => {
+      setNotifications(liveNotifs);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
   const [studentNotifications, setStudentNotifications] = useState(() => storageService.getStudentNotifications());
   const [enquiries, setEnquiries] = useState(() => storageService.getEnquiries());
   const [adminSettings, setAdminSettings] = useState(() => storageService.getAdminSettings());

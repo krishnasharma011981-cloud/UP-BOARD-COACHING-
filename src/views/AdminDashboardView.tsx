@@ -33,6 +33,10 @@ import {
   LogOut,
   ArrowLeft,
   Search,
+  Database,
+  Copy,
+  Check,
+  Terminal,
 } from 'lucide-react';
 import {
   LiveClassItem,
@@ -47,8 +51,167 @@ import {
 } from '../types';
 import { FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
 import { storageService } from '../services/storageService';
-import { fetchSupabaseEnquiries, fetchSupabaseStudents, isSupabaseConfigured } from '../lib/supabase';
+import {
+  fetchSupabaseEnquiries,
+  fetchSupabaseStudents,
+  isSupabaseConfigured,
+  checkSupabaseTableStatus,
+} from '../lib/supabase';
 import { LOGO_IMAGE, HERO_IMAGE } from '../data/mockData';
+
+export const SUPABASE_SCHEMA_SQL_CODE = `-- =========================================================================
+-- UP BOARD COACHING — Complete Supabase PostgreSQL Schema
+-- Project Reference: uolvqremklljqgoutdbl
+-- Supabase URL: https://uolvqremklljqgoutdbl.supabase.co
+-- =========================================================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 1. ADMISSION & STUDENT ENQUIRIES TABLE
+CREATE TABLE IF NOT EXISTS public.enquiries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_name TEXT NOT NULL,
+    parent_name TEXT DEFAULT '',
+    mobile TEXT NOT NULL,
+    email TEXT DEFAULT '',
+    class_level TEXT NOT NULL,
+    subject TEXT DEFAULT 'Complete Board Exam Target Batch',
+    district TEXT DEFAULT 'Uttar Pradesh',
+    message TEXT DEFAULT '',
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can submit admission enquiry" ON public.enquiries;
+DROP POLICY IF EXISTS "Allow anon and auth read enquiries" ON public.enquiries;
+DROP POLICY IF EXISTS "Allow auth update enquiries" ON public.enquiries;
+
+CREATE POLICY "Anyone can submit admission enquiry" ON public.enquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Allow anon and auth read enquiries" ON public.enquiries FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow auth update enquiries" ON public.enquiries FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 2. REGISTERED STUDENTS & PROFILES TABLE
+CREATE TABLE IF NOT EXISTS public.students (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    mobile TEXT NOT NULL,
+    class_level TEXT NOT NULL DEFAULT 'Class 12',
+    district TEXT NOT NULL DEFAULT 'Prayagraj',
+    school_name TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Students can view own profile" ON public.students;
+DROP POLICY IF EXISTS "Allow anon read students list" ON public.students;
+DROP POLICY IF EXISTS "Allow anon insert student registration" ON public.students;
+DROP POLICY IF EXISTS "Students can update own profile" ON public.students;
+
+CREATE POLICY "Students can view own profile" ON public.students FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id OR (SELECT auth.uid()) = id);
+CREATE POLICY "Allow anon read students list" ON public.students FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow anon insert student registration" ON public.students FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Students can update own profile" ON public.students FOR UPDATE TO authenticated USING ((SELECT auth.uid()) = user_id OR (SELECT auth.uid()) = id) WITH CHECK ((SELECT auth.uid()) = user_id OR (SELECT auth.uid()) = id);
+
+-- 3. 50 LIVE QUIZ & MOCK TEST ATTEMPTS TABLE
+CREATE TABLE IF NOT EXISTS public.quiz_attempts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID,
+    quiz_title TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    total_questions INTEGER NOT NULL DEFAULT 50,
+    accuracy INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.quiz_attempts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anon view all quiz scores" ON public.quiz_attempts;
+DROP POLICY IF EXISTS "Allow anon insert for unauthenticated live quiz" ON public.quiz_attempts;
+
+CREATE POLICY "Allow anon view all quiz scores" ON public.quiz_attempts FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow anon insert for unauthenticated live quiz" ON public.quiz_attempts FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+-- 4. LIVE CLASSES TABLE
+CREATE TABLE IF NOT EXISTS public.live_classes (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    title_hindi TEXT,
+    subject TEXT NOT NULL,
+    class_level TEXT NOT NULL,
+    teacher_name TEXT NOT NULL,
+    youtube_video_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    time TEXT NOT NULL,
+    description TEXT,
+    is_live BOOLEAN NOT NULL DEFAULT false,
+    viewers_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.live_classes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view live classes" ON public.live_classes;
+DROP POLICY IF EXISTS "Admin can manage live classes" ON public.live_classes;
+
+CREATE POLICY "Public can view live classes" ON public.live_classes FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin can manage live classes" ON public.live_classes FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 5. STUDY MATERIALS, NOTES & PPTS TABLE
+CREATE TABLE IF NOT EXISTS public.study_materials (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    class_level TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'notes',
+    chapter_title TEXT,
+    file_size TEXT DEFAULT '4.2 MB',
+    download_url TEXT,
+    summary TEXT,
+    download_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.study_materials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view study materials" ON public.study_materials;
+DROP POLICY IF EXISTS "Admin can manage study materials" ON public.study_materials;
+
+CREATE POLICY "Public can view study materials" ON public.study_materials FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin can manage study materials" ON public.study_materials FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 6. OFFICIAL UPMSP CIRCULARS TABLE
+CREATE TABLE IF NOT EXISTS public.upmsp_circulars (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    title_hindi TEXT,
+    category TEXT NOT NULL,
+    date TEXT NOT NULL,
+    circular_number TEXT,
+    pdf_url TEXT,
+    is_urgent BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.upmsp_circulars ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view circulars" ON public.upmsp_circulars;
+DROP POLICY IF EXISTS "Admin can manage circulars" ON public.upmsp_circulars;
+
+CREATE POLICY "Public can view circulars" ON public.upmsp_circulars FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin can manage circulars" ON public.upmsp_circulars FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 7. PERFORMANCE INDEXES
+CREATE INDEX IF NOT EXISTS idx_enquiries_created_at ON public.enquiries(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_students_email ON public.students(email);
+CREATE INDEX IF NOT EXISTS idx_quiz_attempts_created_at ON public.quiz_attempts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_live_classes_class_level ON public.live_classes(class_level);
+CREATE INDEX IF NOT EXISTS idx_study_materials_subject ON public.study_materials(subject);
+CREATE INDEX IF NOT EXISTS idx_upmsp_circulars_date ON public.upmsp_circulars(date DESC);
+
+-- 8. GRANT PRIVILEGES TO ROLES
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON TABLE public.enquiries TO anon, authenticated;
+GRANT ALL ON TABLE public.students TO anon, authenticated;
+GRANT ALL ON TABLE public.quiz_attempts TO anon, authenticated;
+GRANT ALL ON TABLE public.live_classes TO anon, authenticated;
+GRANT ALL ON TABLE public.study_materials TO anon, authenticated;
+GRANT ALL ON TABLE public.upmsp_circulars TO anon, authenticated;
+`;
 
 interface AdminDashboardViewProps {
   liveClasses: LiveClassItem[];
@@ -82,13 +245,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'featured-video' | 'live' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'settings'
+    'featured-video' | 'live' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
   >('featured-video');
 
   // Supabase live data states
   const [supabaseEnquiries, setSupabaseEnquiries] = useState<any[]>([]);
   const [supabaseStudents, setSupabaseStudents] = useState<any[]>([]);
   const [isFetchingSupabase, setIsFetchingSupabase] = useState(false);
+  const [tableStatuses, setTableStatuses] = useState<Record<string, { exists: boolean; count: number; error?: string }>>({});
+  const [isCheckingTables, setIsCheckingTables] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Home Featured Video state (Directly fulfills user's image 1 requirement)
   const currentHomeVideo = adminSettings.homeFeaturedVideo || {
@@ -184,6 +350,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       refreshSupabaseData();
     }
   }, [isAdminAuthenticated]);
+
+  const handleCheckTables = async () => {
+    setIsCheckingTables(true);
+    try {
+      const results = await checkSupabaseTableStatus();
+      setTableStatuses(results);
+    } catch (e) {
+      console.warn('Table diagnostic failed', e);
+    } finally {
+      setIsCheckingTables(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdminAuthenticated && activeTab === 'database') {
+      handleCheckTables();
+    }
+  }, [isAdminAuthenticated, activeTab]);
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SUPABASE_SCHEMA_SQL_CODE);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2500);
+  };
 
   // Admin Login Handler
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -600,6 +790,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         >
           <Bell className="w-4 h-4 text-amber-500" />
           <span>UPMSP & Broadcast</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('database')}
+          className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'database'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Database className="w-4 h-4 text-emerald-400" />
+          <span>Supabase Tables</span>
         </button>
 
         <button
@@ -1538,6 +1740,296 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               Save Admin Settings
             </button>
           </form>
+        </div>
+      )}
+
+      {/* =========================================================
+          TAB: SUPABASE DATABASE & TABLES CREATOR
+         ========================================================= */}
+      {activeTab === 'database' && (
+        <div className="space-y-6">
+          {/* Top Banner */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Database className="w-5 h-5" />
+                </span>
+                <h3 className="font-heading font-extrabold text-lg text-slate-900 dark:text-white">
+                  Supabase PostgreSQL Tables Manager
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
+                  Ref: uolvqremklljqgoutdbl
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Connected Host: <code className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">https://uolvqremklljqgoutdbl.supabase.co</code>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                onClick={handleCheckTables}
+                disabled={isCheckingTables}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isCheckingTables ? 'animate-spin' : ''}`} />
+                <span>{isCheckingTables ? 'Checking Tables...' : 'Check Tables Status'}</span>
+              </button>
+
+              <a
+                href="https://supabase.com/dashboard/project/uolvqremklljqgoutdbl/sql/new"
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open Supabase SQL Editor</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Quick Guide Card */}
+          <div className="p-5 rounded-3xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 space-y-3">
+            <h4 className="font-heading font-bold text-sm text-blue-950 dark:text-blue-200 flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span>How to Create These Tables on Supabase (आसानी से टेबल बनाएं)</span>
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-700 dark:text-slate-300">
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 space-y-1">
+                <span className="font-bold text-blue-600 dark:text-blue-400">Step 1: Copy SQL</span>
+                <p>Click the <strong>"Copy Full SQL Schema"</strong> button below to copy the complete table definitions.</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 space-y-1">
+                <span className="font-bold text-blue-600 dark:text-blue-400">Step 2: Paste in Supabase</span>
+                <p>Click <strong>"Open Supabase SQL Editor"</strong> and paste the copied SQL into the editor query box.</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 space-y-1">
+                <span className="font-bold text-blue-600 dark:text-blue-400">Step 3: Click RUN</span>
+                <p>Click the green <strong>"RUN"</strong> button in Supabase. Then return here and click "Check Tables Status"!</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Table 1: enquiries */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-500" />
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">public.enquiries</span>
+                </div>
+                {tableStatuses.enquiries?.exists ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active ({tableStatuses.enquiries.count} rows)</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Ready to Create
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Receives admission queries, phone numbers, and student form submissions from the Admission Modal.
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl space-y-0.5">
+                <p>• student_name (TEXT)</p>
+                <p>• mobile (TEXT)</p>
+                <p>• class_level, subject, district</p>
+                <p>• message (TEXT)</p>
+                <p>• created_at (TIMESTAMPTZ)</p>
+              </div>
+            </div>
+
+            {/* Table 2: students */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-indigo-500" />
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">public.students</span>
+                </div>
+                {tableStatuses.students?.exists ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active ({tableStatuses.students.count} rows)</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Ready to Create
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Stores student profiles, enrolled class, district, and integrates with Supabase Auth.
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl space-y-0.5">
+                <p>• id (UUID PRIMARY KEY)</p>
+                <p>• user_id (UUID references auth.users)</p>
+                <p>• full_name, email, mobile</p>
+                <p>• class_level, district, school_name</p>
+              </div>
+            </div>
+
+            {/* Table 3: quiz_attempts */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-amber-500" />
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">public.quiz_attempts</span>
+                </div>
+                {tableStatuses.quiz_attempts?.exists ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active ({tableStatuses.quiz_attempts.count} rows)</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Ready to Create
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Records scores and accuracy from the Daily 50-Question Live OMR Quiz.
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl space-y-0.5">
+                <p>• id (UUID PRIMARY KEY)</p>
+                <p>• quiz_title (TEXT)</p>
+                <p>• score, total_questions (INTEGER)</p>
+                <p>• accuracy (INTEGER %)</p>
+              </div>
+            </div>
+
+            {/* Table 4: live_classes */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-red-500" />
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">public.live_classes</span>
+                </div>
+                {tableStatuses.live_classes?.exists ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active ({tableStatuses.live_classes.count} rows)</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Ready to Create
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Stores daily live lectures, teacher names, time schedules, and YouTube video IDs.
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl space-y-0.5">
+                <p>• id (TEXT PRIMARY KEY)</p>
+                <p>• title, subject, class_level</p>
+                <p>• teacher_name, youtube_video_id</p>
+                <p>• is_live (BOOLEAN)</p>
+              </div>
+            </div>
+
+            {/* Table 5: study_materials */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-blue-500" />
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">public.study_materials</span>
+                </div>
+                {tableStatuses.study_materials?.exists ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active ({tableStatuses.study_materials.count} rows)</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Ready to Create
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Contains handwritten notes, chapter PPTs, and formula cheat sheets for classes 9-12.
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl space-y-0.5">
+                <p>• id (TEXT PRIMARY KEY)</p>
+                <p>• title, class_level, subject</p>
+                <p>• type (notes | ppt | formula)</p>
+                <p>• download_url, chapter_title</p>
+              </div>
+            </div>
+
+            {/* Table 6: upmsp_circulars */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-purple-500" />
+                  <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">public.upmsp_circulars</span>
+                </div>
+                {tableStatuses.upmsp_circulars?.exists ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Active ({tableStatuses.upmsp_circulars.count} rows)</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    Ready to Create
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Official circulars and notifications synced with UPMSP Prayagraj portal.
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl space-y-0.5">
+                <p>• id (TEXT PRIMARY KEY)</p>
+                <p>• title, category, date</p>
+                <p>• circular_number, pdf_url</p>
+                <p>• is_urgent (BOOLEAN)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* SQL Editor Code Block with One-Click Copy */}
+          <div className="bg-slate-950 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
+                  <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
+                </div>
+                <span className="font-mono text-xs text-slate-400 ml-2">supabase_schema.sql</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopySql}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    copiedSql
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30'
+                  }`}
+                >
+                  {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSql ? 'Copied to Clipboard!' : 'Copy Full SQL Script'}</span>
+                </button>
+
+                <a
+                  href="https://supabase.com/dashboard/project/uolvqremklljqgoutdbl/sql/new"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Run on Supabase</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="p-5 max-h-96 overflow-y-auto font-mono text-xs text-emerald-400 bg-slate-950 leading-relaxed selection:bg-emerald-900 selection:text-white">
+              <pre className="whitespace-pre-wrap">{SUPABASE_SCHEMA_SQL_CODE}</pre>
+            </div>
+          </div>
         </div>
       )}
 

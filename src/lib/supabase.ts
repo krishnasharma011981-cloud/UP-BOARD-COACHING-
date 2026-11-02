@@ -239,3 +239,46 @@ export async function recordSupabaseQuizScore(
     console.warn('Could not record quiz to Supabase:', err);
   }
 }
+
+/**
+ * Diagnostic helper to test the presence of required tables on Supabase
+ */
+export async function checkSupabaseTableStatus(): Promise<
+  Record<string, { exists: boolean; count: number; error?: string }>
+> {
+  const tables = [
+    'enquiries',
+    'students',
+    'quiz_attempts',
+    'live_classes',
+    'study_materials',
+    'upmsp_circulars',
+  ];
+
+  const results: Record<string, { exists: boolean; count: number; error?: string }> = {};
+
+  if (!supabase) {
+    for (const tbl of tables) {
+      results[tbl] = { exists: false, count: 0, error: 'Supabase client not initialized' };
+    }
+    return results;
+  }
+
+  for (const tbl of tables) {
+    try {
+      const { count, error } = await supabase
+        .from(tbl)
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        results[tbl] = { exists: false, count: 0, error: error.message };
+      } else {
+        results[tbl] = { exists: true, count: count ?? 0 };
+      }
+    } catch (e: any) {
+      results[tbl] = { exists: false, count: 0, error: e?.message || 'Check failed' };
+    }
+  }
+
+  return results;
+}
