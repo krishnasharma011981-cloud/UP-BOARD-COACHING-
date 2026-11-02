@@ -1,0 +1,38 @@
+# =========================================================
+# Netlify & SPA Public Redirects Configuration
+# UP BOARD COACHING (https://upboardcoaching.netlify.app/)
+# =========================================================
+
+# Explicit SPA Routes
+/admin                  /index.html   200
+/courses                /index.html   200
+/live-classes           /index.html   200
+/live-quiz              /index.html   200
+/study-material         /index.html   200
+/previous-year-papers   /index.html   200
+/notifications          /index.html   200
+/exam-calendar          /index.html   200
+/student-portal         /index.html   200
+/class-12               /index.html   200
+/class-11               /index.html   200
+/class-10               /index.html   200
+/class-9                /index.html   200
+/about                  /index.html   200
+/contact                /index.html   200
+/faq                    /index.html   200
+/privacy                /index.html   200
+/terms                  /index.html   200
+/not-found              /index.html   200
+/202                    /index.html   200
+/404                    /index.html   200
+
+# Common Aliases & Public Redirects
+/quiz                   /live-quiz    301
+/test                   /live-quiz    301
+/notes                  /study-material 301
+/pyq                    /previous-year-papers 301
+/login                  /student-portal 301
+/register               /student-portal 301
+
+# Universal SPA fallback rewrite
+/*                      /index.html   200

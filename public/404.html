@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>202 / 404 - UP BOARD COACHING</title>
+    <script>
+      // Single Page App redirect for static hosts
+      sessionStorage.redirect = location.href;
+      var path = location.pathname + location.search + location.hash;
+      location.replace('/#' + path.replace(/^\//, ''));
+    </script>
+  </head>
+  <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: white;">
+    <h2>Redirecting to UP BOARD COACHING...</h2>
+    <p>If you are not redirected automatically, <a href="/" style="color: #f59e0b;">click here to go home</a>.</p>
+  </body>
+</html>

@@ -22,7 +22,8 @@ export type PageView =
   | 'faq'
   | 'privacy'
   | 'terms'
-  | 'admin';
+  | 'admin'
+  | 'not-found';
 
 export type ClassLevel = 'Class 9' | 'Class 10' | 'Class 11' | 'Class 12';
 

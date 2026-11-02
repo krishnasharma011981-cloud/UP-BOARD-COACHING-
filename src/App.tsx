@@ -27,18 +27,113 @@ import { StudentPortalView } from './views/StudentPortalView';
 import { LiveQuizView } from './views/LiveQuizView';
 import { AdminDashboardView } from './views/AdminDashboardView';
 import { AboutView, ContactView, FaqView, PrivacyView, TermsView } from './views/SupportViews';
+import { NotFoundView } from './views/NotFoundView';
 import { upmspService } from './services/upmspService';
 
-export default function App() {
-  // Check if URL directly targets /admin
-  const initialIsAdminRoute = () => {
-    if (typeof window === 'undefined') return false;
-    const path = window.location.pathname.toLowerCase();
-    const hash = window.location.hash.toLowerCase();
-    return path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin';
-  };
+// Primary URL routes mapping
+const ROUTE_PATH_MAP: Record<PageView, string> = {
+  home: '/',
+  courses: '/courses',
+  'class-12': '/class-12',
+  'class-11': '/class-11',
+  'class-10': '/class-10',
+  'class-9': '/class-9',
+  'live-classes': '/live-classes',
+  'live-quiz': '/live-quiz',
+  'study-material': '/study-material',
+  'previous-year-papers': '/previous-year-papers',
+  notifications: '/notifications',
+  'exam-calendar': '/exam-calendar',
+  'student-portal': '/student-portal',
+  about: '/about',
+  contact: '/contact',
+  faq: '/faq',
+  privacy: '/privacy',
+  terms: '/terms',
+  admin: '/admin',
+  'not-found': '/not-found',
+};
 
-  const [currentPage, setCurrentPage] = useState<PageView>(() => (initialIsAdminRoute() ? 'admin' : 'home'));
+// Public redirects & alias routes mapping
+const PUBLIC_REDIRECTS: Record<string, PageView> = {
+  '/quiz': 'live-quiz',
+  '/test': 'live-quiz',
+  '/50-quiz': 'live-quiz',
+  '/omr': 'live-quiz',
+  '/notes': 'study-material',
+  '/materials': 'study-material',
+  '/ppt': 'study-material',
+  '/pyq': 'previous-year-papers',
+  '/papers': 'previous-year-papers',
+  '/model-papers': 'previous-year-papers',
+  '/login': 'student-portal',
+  '/register': 'student-portal',
+  '/portal': 'student-portal',
+  '/profile': 'student-portal',
+  '/updates': 'notifications',
+  '/circulars': 'notifications',
+  '/upmsp': 'notifications',
+  '/calendar': 'exam-calendar',
+  '/timetable': 'exam-calendar',
+  '/datesheet': 'exam-calendar',
+  '/classes': 'courses',
+  '/12': 'class-12',
+  '/senior-secondary': 'class-12',
+  '/11': 'class-11',
+  '/pre-senior-secondary': 'class-11',
+  '/10': 'class-10',
+  '/secondary': 'class-10',
+  '/9': 'class-9',
+  '/pre-secondary': 'class-9',
+  '/about-us': 'about',
+  '/contact-us': 'contact',
+  '/help': 'contact',
+  '/support': 'contact',
+  '/faqs': 'faq',
+  '/privacy-policy': 'privacy',
+  '/terms-of-service': 'terms',
+  '/202': 'not-found',
+  '/404': 'not-found',
+  '/not-found': 'not-found',
+};
+
+export function resolveCurrentRoute(): { page: PageView; canonicalPath: string } {
+  if (typeof window === 'undefined') return { page: 'home', canonicalPath: '/' };
+
+  const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+  const rawHash = window.location.hash.toLowerCase().replace('#', '').replace(/\/+$/, '') || '';
+
+  // Priority check: hash routing (e.g. #/admin or #admin) or pathname
+  let target = rawPath;
+  if (rawHash) {
+    target = rawHash.startsWith('/') ? rawHash : `/${rawHash}`;
+  }
+
+  // 1. Direct match with primary routes
+  for (const [page, path] of Object.entries(ROUTE_PATH_MAP)) {
+    if (target === path) {
+      return { page: page as PageView, canonicalPath: path };
+    }
+  }
+
+  // 2. Match public redirects & aliases
+  if (PUBLIC_REDIRECTS[target]) {
+    const targetPage = PUBLIC_REDIRECTS[target];
+    return { page: targetPage, canonicalPath: ROUTE_PATH_MAP[targetPage] };
+  }
+
+  // 3. Fallback: if root or empty
+  if (target === '' || target === '/') {
+    return { page: 'home', canonicalPath: '/' };
+  }
+
+  // 4. Otherwise unrecognized route -> 202 / 404 Not Found Page
+  return { page: 'not-found', canonicalPath: target };
+}
+
+export default function App() {
+  const initialRoute = resolveCurrentRoute();
+  const [currentPage, setCurrentPage] = useState<PageView>(() => initialRoute.page);
   const [currentUser, setCurrentUser] = useState<StudentUser | null>(() => storageService.getCurrentUser());
 
   // Dark Theme state with persistence (Default is false = clean white theme)
@@ -68,22 +163,32 @@ export default function App() {
     setIsDarkMode((prev) => !prev);
   };
 
-  // URL listener for /admin and #admin
+  // Comprehensive URL and Public Redirect Router listener
   useEffect(() => {
-    const checkAdminRoute = () => {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin') {
-        setCurrentPage('admin');
+    const handleLocationChange = () => {
+      const { page, canonicalPath } = resolveCurrentRoute();
+      setCurrentPage(page);
+
+      // Public redirect URL canonicalization (e.g., if user accessed /quiz, update to /live-quiz)
+      try {
+        if (
+          page !== 'not-found' &&
+          window.location.pathname !== canonicalPath &&
+          !window.location.hash
+        ) {
+          window.history.replaceState({ page }, '', canonicalPath);
+        }
+      } catch {
+        // ignore in iframe
       }
     };
 
-    checkAdminRoute();
-    window.addEventListener('popstate', checkAdminRoute);
-    window.addEventListener('hashchange', checkAdminRoute);
+    handleLocationChange();
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
     return () => {
-      window.removeEventListener('popstate', checkAdminRoute);
-      window.removeEventListener('hashchange', checkAdminRoute);
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
     };
   }, []);
 
@@ -157,10 +262,9 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-      if (page === 'admin') {
-        window.history.pushState(null, '', '/admin');
-      } else if (window.location.pathname === '/admin' || window.location.hash.includes('admin')) {
-        window.history.pushState(null, '', '/');
+      const canonical = ROUTE_PATH_MAP[page] || '/';
+      if (window.location.pathname !== canonical && !window.location.hash) {
+        window.history.pushState({ page }, '', canonical);
       }
     } catch {
       // ignore in restricted iframe
@@ -351,6 +455,17 @@ export default function App() {
         {currentPage === 'privacy' && <PrivacyView />}
 
         {currentPage === 'terms' && <TermsView />}
+
+        {currentPage === 'not-found' && (
+          <NotFoundView
+            onNavigate={navigateTo}
+            attemptedPath={
+              typeof window !== 'undefined'
+                ? window.location.pathname + window.location.hash
+                : ''
+            }
+          />
+        )}
       </main>
 
       {/* 3. PROFESSIONAL FOOTER (No admin link) */}
