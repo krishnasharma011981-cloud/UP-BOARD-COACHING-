@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Video,
   Download,
@@ -57,6 +57,7 @@ interface HomeViewProps {
   reminders: string[];
   onToggleReminder: (id: string) => void;
   adminSettings?: AdminSettings;
+  onOpenPdfViewer?: (doc: any) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -71,6 +72,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   reminders,
   onToggleReminder,
   adminSettings,
+  onOpenPdfViewer,
 }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const activeLiveClass = liveClasses.find((c) => c.isLiveNow) || liveClasses[0];
@@ -82,9 +84,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
     classLevel: activeLiveClass.classLevel,
     teacherName: activeLiveClass.teacherName,
     youtubeVideoId: activeLiveClass.youtubeVideoId,
-    thumbnailUrl: HERO_IMAGE,
+    thumbnailUrl: activeLiveClass.youtubeVideoId
+      ? `https://img.youtube.com/vi/${activeLiveClass.youtubeVideoId}/hqdefault.jpg`
+      : HERO_IMAGE,
     isLive: true,
   };
+
+  const currentYtId = featuredVideo.youtubeVideoId || activeLiveClass.youtubeVideoId || 'jfKfPfyJRdk';
+  const initialThumb =
+    featuredVideo.thumbnailUrl &&
+    !featuredVideo.thumbnailUrl.startsWith('/src/')
+      ? featuredVideo.thumbnailUrl
+      : `https://img.youtube.com/vi/${currentYtId}/hqdefault.jpg`;
+
+  const [currentThumb, setCurrentThumb] = useState<string>(initialThumb);
+
+  useEffect(() => {
+    const id = featuredVideo.youtubeVideoId || activeLiveClass.youtubeVideoId || 'jfKfPfyJRdk';
+    if (featuredVideo.thumbnailUrl && !featuredVideo.thumbnailUrl.startsWith('/src/')) {
+      setCurrentThumb(featuredVideo.thumbnailUrl);
+    } else {
+      setCurrentThumb(`https://img.youtube.com/vi/${id}/hqdefault.jpg`);
+    }
+  }, [featuredVideo.youtubeVideoId, featuredVideo.thumbnailUrl, activeLiveClass.youtubeVideoId]);
 
   const handleOpenFeatured = () => {
     const itemToOpen: LiveClassItem = {
@@ -101,11 +123,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const handleDownload = (item: StudyMaterialItem) => {
-    storageService.downloadResource(item.title, item.type === 'ppt' ? 'ppt' : 'pdf', {
-      summary: item.summary,
-      keyTopics: item.keyTopics,
-      studentName: currentUser?.fullName,
-    });
+    if (onOpenPdfViewer) {
+      onOpenPdfViewer(item);
+    } else {
+      storageService.downloadResource(item.title, item.type === 'ppt' ? 'ppt' : 'pdf', {
+        summary: item.summary,
+        keyTopics: item.keyTopics,
+        studentName: currentUser?.fullName,
+      });
+    }
   };
 
   return (
@@ -202,9 +228,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <div className="relative bg-white dark:bg-slate-900 rounded-2xl p-2.5 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden group">
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-900">
                     <img
-                      src={featuredVideo.thumbnailUrl || HERO_IMAGE}
+                      src={currentThumb}
                       alt={featuredVideo.title}
                       referrerPolicy="no-referrer"
+                      onError={() => {
+                        if (currentThumb.includes('maxresdefault')) {
+                          setCurrentThumb(`https://img.youtube.com/vi/${currentYtId}/hqdefault.jpg`);
+                        } else if (currentThumb !== HERO_IMAGE) {
+                          setCurrentThumb(HERO_IMAGE);
+                        }
+                      }}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
 
@@ -850,20 +883,53 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
               <div className="pt-5 border-t border-slate-100 flex items-center gap-3 mt-4">
                 <button
-                  onClick={() => onNavigate('previous-year-papers')}
+                  onClick={() => {
+                    if (onOpenPdfViewer) {
+                      onOpenPdfViewer({
+                        title: paper.title,
+                        classLevel: paper.classLevel,
+                        subject: paper.subject,
+                        type: 'pyq',
+                        year: paper.year,
+                        paperCode: paper.paperCode,
+                        summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (${paper.year}) with step-by-step marking solution.`,
+                        keyTopics: paper.solutionHighlights || ['All Questions & Step Solutions'],
+                        sampleQuestions: [
+                          { q: 'Section A: Multiple Choice Question (1 Mark each)', a: 'Detailed step-by-step marking scheme verified answers provided in this official UPMSP solution.', marks: 1 },
+                          { q: 'Section B: Short Answer Questions (2-3 Marks)', a: 'Conceptual definitions with circuit diagrams / chemical formulas / geometrical proofs.', marks: 3 },
+                          { q: 'Section C: Long Answer Derivations (5 Marks)', a: 'Comprehensive derivation with neat diagrams and final formula highlight.', marks: 5 },
+                        ]
+                      });
+                    } else {
+                      onNavigate('previous-year-papers');
+                    }
+                  }}
                   className="flex-1 py-2 px-3 rounded-xl bg-blue-950 hover:bg-blue-800 text-white font-semibold text-xs text-center transition-colors cursor-pointer"
                 >
                   View Paper & Solution
                 </button>
                 <button
                   onClick={() => {
-                    storageService.downloadResource(paper.title, 'pdf', {
-                      summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (${paper.year}) with answer key.`,
-                      keyTopics: paper.solutionHighlights || ['All Questions & Solutions'],
-                    });
+                    if (onOpenPdfViewer) {
+                      onOpenPdfViewer({
+                        title: paper.title,
+                        classLevel: paper.classLevel,
+                        subject: paper.subject,
+                        type: 'pyq',
+                        year: paper.year,
+                        paperCode: paper.paperCode,
+                        summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (${paper.year}) with step-by-step marking solution.`,
+                        keyTopics: paper.solutionHighlights || ['All Questions & Step Solutions'],
+                      });
+                    } else {
+                      storageService.downloadResource(paper.title, 'pdf', {
+                        summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (${paper.year}) with answer key.`,
+                        keyTopics: paper.solutionHighlights || ['All Questions & Solutions'],
+                      });
+                    }
                   }}
                   className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                  title="Download Paper PDF"
+                  title="Open & Download Paper PDF"
                 >
                   <Download className="w-4 h-4" />
                 </button>

@@ -13,6 +13,7 @@ import { LivePlayerModal } from './components/LivePlayerModal';
 import { MockTestModal } from './components/MockTestModal';
 import { EnquiryModal } from './components/EnquiryModal';
 import { StudentNotificationDrawer } from './components/StudentNotificationDrawer';
+import { PdfViewerModal } from './components/PdfViewerModal';
 
 // Views
 import { HomeView } from './views/HomeView';
@@ -217,6 +218,7 @@ export default function App() {
   const [selectedQuiz, setSelectedQuiz] = useState<PracticeQuiz | null>(null);
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
+  const [selectedPdfDoc, setSelectedPdfDoc] = useState<any | null>(null);
 
   // Sync refresh function after admin operations
   const refreshAllData = () => {
@@ -272,7 +274,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-amber-400 selection:text-slate-950 transition-colors">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-amber-400 selection:text-slate-950 transition-colors overflow-x-hidden max-w-full w-full relative">
       
       {/* 1. STICKY TOP NAVBAR */}
       <Navbar
@@ -287,7 +289,7 @@ export default function App() {
       />
 
       {/* 2. MAIN BODY CONTENT */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {currentPage === 'home' && (
           <HomeView
             onNavigate={navigateTo}
@@ -301,6 +303,7 @@ export default function App() {
             reminders={reminders}
             onToggleReminder={handleToggleReminder}
             adminSettings={adminSettings}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -338,6 +341,7 @@ export default function App() {
             savedMaterialIds={currentUser?.savedMaterialIds || []}
             onToggleBookmark={handleToggleBookmarkMaterial}
             onNavigate={navigateTo}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -351,6 +355,7 @@ export default function App() {
             savedMaterialIds={currentUser?.savedMaterialIds || []}
             onToggleBookmark={handleToggleBookmarkMaterial}
             onNavigate={navigateTo}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -364,6 +369,7 @@ export default function App() {
             savedMaterialIds={currentUser?.savedMaterialIds || []}
             onToggleBookmark={handleToggleBookmarkMaterial}
             onNavigate={navigateTo}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -377,6 +383,7 @@ export default function App() {
             savedMaterialIds={currentUser?.savedMaterialIds || []}
             onToggleBookmark={handleToggleBookmarkMaterial}
             onNavigate={navigateTo}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -386,6 +393,7 @@ export default function App() {
             savedMaterialIds={currentUser?.savedMaterialIds || []}
             onToggleBookmark={handleToggleBookmarkMaterial}
             currentUserFullName={currentUser?.fullName}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -395,6 +403,7 @@ export default function App() {
             bookmarkedPaperIds={currentUser?.bookmarkedPaperIds || []}
             onToggleBookmark={handleToggleBookmarkPaper}
             currentUserFullName={currentUser?.fullName}
+            onOpenPdfViewer={(doc) => setSelectedPdfDoc(doc)}
           />
         )}
 
@@ -510,6 +519,15 @@ export default function App() {
         onRefresh={() => setStudentNotifications(storageService.getStudentNotifications())}
         onNavigate={navigateTo}
       />
+
+      {/* Visual PDF Viewer Modal */}
+      {selectedPdfDoc && (
+        <PdfViewerModal
+          isOpen={!!selectedPdfDoc}
+          onClose={() => setSelectedPdfDoc(null)}
+          document={selectedPdfDoc}
+        />
+      )}
     </div>
   );
 }

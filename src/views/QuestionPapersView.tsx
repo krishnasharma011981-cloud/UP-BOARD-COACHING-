@@ -25,6 +25,7 @@ interface QuestionPapersViewProps {
   bookmarkedPaperIds: string[];
   onToggleBookmark: (paperId: string) => void;
   currentUserFullName?: string;
+  onOpenPdfViewer?: (doc: any) => void;
 }
 
 export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
@@ -32,6 +33,7 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
   bookmarkedPaperIds,
   onToggleBookmark,
   currentUserFullName,
+  onOpenPdfViewer,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState<'All' | ClassLevel>('All');
@@ -52,11 +54,20 @@ export const QuestionPapersView: React.FC<QuestionPapersViewProps> = ({
 
   const handleDownload = (paper: QuestionPaperItem, withSolution: boolean = false) => {
     const title = `${paper.title} ${withSolution ? '- Solved Answer Key' : '- Question Paper'}`;
-    storageService.downloadResource(title, 'pdf', {
-      summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (Year ${paper.year}, Code: ${paper.paperCode}). Duration: ${paper.duration}, Max Marks: ${paper.maxMarks}.`,
-      keyTopics: paper.solutionHighlights || ['All Questions with Step Marking Distribution'],
-      studentName: currentUserFullName,
-    });
+    if (onOpenPdfViewer) {
+      onOpenPdfViewer({
+        ...paper,
+        title,
+        summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (Year ${paper.year}, Code: ${paper.paperCode}). Duration: ${paper.duration}, Max Marks: ${paper.maxMarks}.`,
+        keyTopics: paper.solutionHighlights || ['All Questions with Step Marking Distribution'],
+      });
+    } else {
+      storageService.downloadResource(title, 'pdf', {
+        summary: `Official UPMSP ${paper.classLevel} ${paper.subject} Question Paper (Year ${paper.year}, Code: ${paper.paperCode}). Duration: ${paper.duration}, Max Marks: ${paper.maxMarks}.`,
+        keyTopics: paper.solutionHighlights || ['All Questions with Step Marking Distribution'],
+        studentName: currentUserFullName,
+      });
+    }
   };
 
   return (

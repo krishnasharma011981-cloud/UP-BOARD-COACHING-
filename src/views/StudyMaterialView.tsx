@@ -24,6 +24,7 @@ interface StudyMaterialViewProps {
   savedMaterialIds: string[];
   onToggleBookmark: (materialId: string) => void;
   currentUserFullName?: string;
+  onOpenPdfViewer?: (doc: any) => void;
 }
 
 export const StudyMaterialView: React.FC<StudyMaterialViewProps> = ({
@@ -31,6 +32,7 @@ export const StudyMaterialView: React.FC<StudyMaterialViewProps> = ({
   savedMaterialIds,
   onToggleBookmark,
   currentUserFullName,
+  onOpenPdfViewer,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState<'All' | ClassLevel>('All');
@@ -48,11 +50,15 @@ export const StudyMaterialView: React.FC<StudyMaterialViewProps> = ({
   });
 
   const handleDownload = (item: StudyMaterialItem) => {
-    storageService.downloadResource(item.title, item.type === 'ppt' ? 'ppt' : 'pdf', {
-      summary: item.summary,
-      keyTopics: item.keyTopics,
-      studentName: currentUserFullName,
-    });
+    if (onOpenPdfViewer) {
+      onOpenPdfViewer(item);
+    } else {
+      storageService.downloadResource(item.title, item.type === 'ppt' ? 'ppt' : 'pdf', {
+        summary: item.summary,
+        keyTopics: item.keyTopics,
+        studentName: currentUserFullName,
+      });
+    }
   };
 
   return (
@@ -228,9 +234,9 @@ export const StudyMaterialView: React.FC<StudyMaterialViewProps> = ({
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setPreviewItem(mat)}
+                      onClick={() => (onOpenPdfViewer ? onOpenPdfViewer(mat) : setPreviewItem(mat))}
                       className="p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
-                      title="Quick Preview"
+                      title="View PDF Document"
                     >
                       <Eye className="w-4 h-4" />
                     </button>

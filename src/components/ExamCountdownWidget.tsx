@@ -75,45 +75,45 @@ export const ExamCountdownWidget: React.FC<ExamCountdownWidgetProps> = ({
         </div>
 
         {/* Center / Right Countdown Numbers */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          <div className="flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 min-w-[70px] sm:min-w-[80px]">
-            <span className="text-2xl sm:text-3xl font-heading font-extrabold text-amber-400 tabular-nums">
+        <div className="flex items-center justify-center gap-1.5 sm:gap-4 w-full sm:w-auto max-w-full">
+          <div className="flex-1 sm:flex-initial flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+            <span className="text-xl sm:text-3xl font-heading font-extrabold text-amber-400 tabular-nums">
               {String(timeLeft.days).padStart(2, '0')}
             </span>
-            <span className="text-[10px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
+            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
               Days
             </span>
           </div>
 
-          <div className="text-xl font-bold text-slate-500">:</div>
+          <div className="text-lg sm:text-xl font-bold text-slate-500">:</div>
 
-          <div className="flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 min-w-[70px] sm:min-w-[80px]">
-            <span className="text-2xl sm:text-3xl font-heading font-extrabold text-white tabular-nums">
+          <div className="flex-1 sm:flex-initial flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+            <span className="text-xl sm:text-3xl font-heading font-extrabold text-white tabular-nums">
               {String(timeLeft.hours).padStart(2, '0')}
             </span>
-            <span className="text-[10px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
+            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
               Hours
             </span>
           </div>
 
-          <div className="text-xl font-bold text-slate-500">:</div>
+          <div className="text-lg sm:text-xl font-bold text-slate-500">:</div>
 
-          <div className="flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 min-w-[70px] sm:min-w-[80px]">
-            <span className="text-2xl sm:text-3xl font-heading font-extrabold text-white tabular-nums">
+          <div className="flex-1 sm:flex-initial flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+            <span className="text-xl sm:text-3xl font-heading font-extrabold text-white tabular-nums">
               {String(timeLeft.minutes).padStart(2, '0')}
             </span>
-            <span className="text-[10px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
+            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
               Mins
             </span>
           </div>
 
-          <div className="text-xl font-bold text-slate-500 hidden sm:block">:</div>
+          <div className="text-lg sm:text-xl font-bold text-slate-500 hidden sm:block">:</div>
 
-          <div className="hidden sm:flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 min-w-[70px] sm:min-w-[80px]">
-            <span className="text-2xl sm:text-3xl font-heading font-extrabold text-amber-400 tabular-nums">
+          <div className="hidden sm:flex flex-1 sm:flex-initial flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+            <span className="text-xl sm:text-3xl font-heading font-extrabold text-amber-400 tabular-nums">
               {String(timeLeft.seconds).padStart(2, '0')}
             </span>
-            <span className="text-[10px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
+            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
               Secs
             </span>
           </div>

@@ -48,6 +48,7 @@ interface ClassDetailViewProps {
   savedMaterialIds: string[];
   onToggleBookmark: (materialId: string) => void;
   onNavigate: (page: PageView) => void;
+  onOpenPdfViewer?: (doc: any) => void;
 }
 
 export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
@@ -59,16 +60,19 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
   savedMaterialIds,
   onToggleBookmark,
   onNavigate,
+  onOpenPdfViewer,
 }) => {
-  const subjects = SUBJECTS_DATA.filter((s) => s.classLevel === classLevel);
+  const subjects = storageService.getSubjects().filter((s) => s.classLevel === classLevel);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
   const [activeTab, setActiveTab] = useState<'chapters' | 'notes' | 'ppt' | 'qa' | 'quizzes' | 'schedule'>('chapters');
 
   const currentSubject = subjects.find((s) => s.id === selectedSubjectId) || subjects[0];
 
-  // Retrieve curated chapters or generate fallback syllabus chapters
+  // Retrieve curated chapters from storageService or generate fallback syllabus chapters
   const subjectChapters: ChapterItem[] = (() => {
     if (!currentSubject) return [];
+    const storedList = storageService.getChaptersBySubject(classLevel, currentSubject.code);
+    if (storedList.length > 0) return storedList;
     const directList = getChaptersBySubject(classLevel, currentSubject.code);
     if (directList.length > 0) return directList;
 
@@ -131,10 +135,14 @@ export const ClassDetailView: React.FC<ClassDetailViewProps> = ({
   );
 
   const handleDownload = (material: StudyMaterialItem) => {
-    storageService.downloadResource(material.title, material.type === 'ppt' ? 'ppt' : 'pdf', {
-      summary: material.summary,
-      keyTopics: material.keyTopics,
-    });
+    if (onOpenPdfViewer) {
+      onOpenPdfViewer(material);
+    } else {
+      storageService.downloadResource(material.title, material.type === 'ppt' ? 'ppt' : 'pdf', {
+        summary: material.summary,
+        keyTopics: material.keyTopics,
+      });
+    }
   };
 
   const classDisplayNames: Record<ClassLevel, string> = {

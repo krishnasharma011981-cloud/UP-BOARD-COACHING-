@@ -14,6 +14,8 @@ import {
   AdminSettings,
   ClassLevel,
   PracticeQuizQuestion,
+  ChapterItem,
+  SubjectItem,
 } from '../types';
 import {
   INITIAL_ADMIN_SETTINGS,
@@ -23,7 +25,9 @@ import {
   UPMSP_NOTIFICATIONS_DATA,
   INITIAL_NOTIFICATIONS,
   INITIAL_ENQUIRIES,
+  SUBJECTS_DATA,
 } from '../data/mockData';
+import { ALL_CHAPTERS_DATA } from '../data/chaptersData';
 import { FIFTY_LIVE_QUIZZES, FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
 import { submitSupabaseEnquiry } from '../lib/supabase';
 
@@ -39,6 +43,8 @@ const STORAGE_KEYS = {
   ADMIN_SETTINGS: 'upboard_admin_settings',
   REMINDERS: 'upboard_live_reminders',
   DAILY_QUIZZES: 'upboard_daily_quizzes_50',
+  CHAPTERS: 'upboard_all_chapters',
+  SUBJECTS: 'upboard_all_subjects',
 };
 
 // Default guest / demo student
@@ -431,47 +437,100 @@ class StorageService {
     this.saveAdminSettings(settings);
   }
 
-  // --- Download Simulation Helper ---
+  // --- Chapters & Subjects Video Links Management (Admin Configurable) ---
+  getChapters(): ChapterItem[] {
+    return this.safeGet<ChapterItem[]>(STORAGE_KEYS.CHAPTERS, ALL_CHAPTERS_DATA);
+  }
+
+  getChaptersBySubject(classLevel: ClassLevel, subjectCode: string): ChapterItem[] {
+    const all = this.getChapters();
+    return all.filter(
+      (ch) => ch.classLevel === classLevel && ch.subjectCode.toUpperCase() === subjectCode.toUpperCase()
+    );
+  }
+
+  saveChapter(chapter: ChapterItem): void {
+    const list = this.getChapters();
+    const idx = list.findIndex((c) => c.id === chapter.id);
+    if (idx >= 0) {
+      list[idx] = chapter;
+    } else {
+      list.push(chapter);
+    }
+    this.safeSet(STORAGE_KEYS.CHAPTERS, list);
+  }
+
+  deleteChapter(chapterId: string): void {
+    const list = this.getChapters().filter((c) => c.id !== chapterId);
+    this.safeSet(STORAGE_KEYS.CHAPTERS, list);
+  }
+
+  getSubjects(): SubjectItem[] {
+    return this.safeGet<SubjectItem[]>(STORAGE_KEYS.SUBJECTS, SUBJECTS_DATA);
+  }
+
+  saveSubject(subject: SubjectItem): void {
+    const list = this.getSubjects();
+    const idx = list.findIndex((s) => s.id === subject.id);
+    if (idx >= 0) {
+      list[idx] = subject;
+    } else {
+      list.push(subject);
+    }
+    this.safeSet(STORAGE_KEYS.SUBJECTS, list);
+  }
+
+  deleteSubject(subjectId: string): void {
+    const list = this.getSubjects().filter((s) => s.id !== subjectId);
+    this.safeSet(STORAGE_KEYS.SUBJECTS, list);
+  }
+
+  // --- Download Official Document Helper (Formatted Visual Document Blob) ---
   downloadResource(title: string, type: 'pdf' | 'ppt' | 'notes', details: Record<string, any> = {}): void {
-    const formattedContent = `
-============================================================
-  UP BOARD COACHING - YOUR SUCCESS, OUR MISSION
-  Official Study Material & Student Resource Portal
-  Website: https://upboardcoaching.netlify.app | YouTube: @UPBoard_Coaching
-============================================================
+    const formattedHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${title} - UP BOARD COACHING</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: 'Mukta', 'Segoe UI', Arial, sans-serif; color: #0f172a; padding: 25px; line-height: 1.6; }
+    .header { text-align: center; border-bottom: 3px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 24px; }
+    .title { font-size: 22pt; font-weight: bold; color: #1e3a8a; margin: 0; }
+    .badge { display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 11pt; margin-bottom: 6px; }
+    .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; margin-bottom: 20px; background: #f8fafc; }
+    .box-title { font-weight: bold; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; font-size: 13pt; }
+    .topic-list li { margin-bottom: 6px; }
+    .footer { text-align: center; border-top: 1px solid #cbd5e1; padding-top: 15px; font-size: 10pt; color: #64748b; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="badge">UTTAR PRADESH MADHYAMIK SHIKSHA PARISHAD (UPMSP)</div>
+    <h1 class="title">${title}</h1>
+    <p style="color: #64748b; font-size: 12pt; margin-top: 4px;">Official Study Material & Student Resource Portal</p>
+  </div>
+  <div class="box">
+    <div class="box-title">📖 Chapter Summary & Revision Highlights</div>
+    <p>${details.summary || 'NCERT and UP Board syllabus compliant notes prepared by senior coaching evaluators.'}</p>
+    ${
+      details.keyTopics && details.keyTopics.length > 0
+        ? `<div style="margin-top: 14px;"><strong>Key Topics Covered:</strong><ul class="topic-list">${details.keyTopics.map((t: string) => `<li>${t}</li>`).join('')}</ul></div>`
+        : ''
+    }
+  </div>
+  <div class="footer">
+    UP BOARD COACHING • https://upboardcoaching.netlify.app • YouTube: @UPBoard_Coaching
+  </div>
+</body>
+</html>`;
 
-Title: ${title}
-Format: ${type.toUpperCase()}
-Generated for: ${details.studentName || 'UP Board Aspirant'}
-Date: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
-Official Board: Uttar Pradesh Madhyamik Shiksha Parishad (UPMSP Prayagraj)
-
-------------------------------------------------------------
-CHAPTER SUMMARY & KEY STUDY HIGHLIGHTS:
-------------------------------------------------------------
-${details.summary || 'Comprehensive chapter notes prepared by expert senior faculty according to latest NCERT/UPMSP syllabus guidelines.'}
-
-KEY TOPICS COVERED:
-${(details.keyTopics || ['Definitions & Formulas', 'Important Board Derivations', 'Previous Year Questions (PYQs)', 'Step-by-step Model Answers']).map((t: string, i: number) => ` [${i + 1}] ${t}`).join('\n')}
-
-STUDY INSTRUCTIONS:
-1. Practice writing answers with proper headings, underlined key terms, and neat diagrams.
-2. For Class 10: Solve the 20 OMR MCQs within 25 minutes.
-3. For Class 12: Maintain clean steps in mathematical and physics numericals.
-
-Subscribe to our YouTube Channel for daily free live lectures:
-https://www.youtube.com/@UPBoard_Coaching
-
-(c) UP BOARD COACHING. All Rights Reserved.
-============================================================
-    `.trim();
-
-    const blob = new Blob([formattedContent], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([formattedHtml], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
     const cleanFileName = title.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 40);
-    anchor.download = `UP_BOARD_COACHING_${cleanFileName}.${type === 'ppt' ? 'pptx.txt' : 'pdf.txt'}`;
+    anchor.download = `UP_BOARD_${cleanFileName}.html`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);

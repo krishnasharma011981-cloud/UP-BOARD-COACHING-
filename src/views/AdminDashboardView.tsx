@@ -48,8 +48,10 @@ import {
   ClassLevel,
   StudentNotificationItem,
   StudentUser,
+  SubjectItem,
 } from '../types';
 import { FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
+import { ChapterItem, getChapterYouTubeLink } from '../data/chaptersData';
 import { storageService } from '../services/storageService';
 import {
   fetchSupabaseEnquiries,
@@ -245,7 +247,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'featured-video' | 'live' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
+    'featured-video' | 'live' | 'chapters-videos' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
   >('featured-video');
 
   // Supabase live data states
@@ -320,6 +322,137 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [broadcastClass, setBroadcastClass] = useState<'All' | ClassLevel>('All');
   const [broadcastSent, setBroadcastSent] = useState(false);
 
+  // Chapters & Subjects Management (User requirement: Add/Edit Chapter Videos, Subjects, Links)
+  const [manageClass, setManageClass] = useState<ClassLevel>('Class 12');
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>(() => storageService.getSubjects());
+  const [chaptersList, setChaptersList] = useState<ChapterItem[]>(() => storageService.getChapters());
+  
+  const currentClassSubjects = subjectsList.filter((s) => s.classLevel === manageClass);
+  const [selectedManageSubjectCode, setSelectedManageSubjectCode] = useState<string>(() => {
+    const list = storageService.getSubjects().filter((s) => s.classLevel === 'Class 12');
+    return list[0]?.code || '12-PHY';
+  });
+
+  useEffect(() => {
+    const list = subjectsList.filter((s) => s.classLevel === manageClass);
+    if (list.length > 0 && !list.some((s) => s.code.toUpperCase() === selectedManageSubjectCode.toUpperCase())) {
+      setSelectedManageSubjectCode(list[0].code);
+    }
+  }, [manageClass, subjectsList, selectedManageSubjectCode]);
+
+  // Modals for Chapter & Subject Video Editing
+  const [showChapterModal, setShowChapterModal] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<ChapterItem | null>(null);
+  const [chapterNum, setChapterNum] = useState<number>(1);
+  const [chapterTitle, setChapterTitle] = useState('');
+  const [chapterTitleHindi, setChapterTitleHindi] = useState('');
+  const [chapterYtUrl, setChapterYtUrl] = useState('');
+  const [chapterDuration, setChapterDuration] = useState('1h 30m');
+  const [chapterTopicsStr, setChapterTopicsStr] = useState('');
+
+  const [showSubjectModal, setShowSubjectModal] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectNameHindi, setNewSubjectNameHindi] = useState('');
+  const [newSubjectCode, setNewSubjectCode] = useState('');
+  const [newSubjectClass, setNewSubjectClass] = useState<ClassLevel>('Class 12');
+  const [newSubjectChaptersCount, setNewSubjectChaptersCount] = useState<number>(12);
+  const [newSubjectDesc, setNewSubjectDesc] = useState('');
+
+  const [chapterSavedToast, setChapterSavedToast] = useState(false);
+
+  const handleOpenAddChapter = () => {
+    const filtered = chaptersList.filter(
+      (c) => c.classLevel === manageClass && c.subjectCode.toUpperCase() === selectedManageSubjectCode.toUpperCase()
+    );
+    const nextNum = filtered.length > 0 ? Math.max(...filtered.map((c) => c.chapterNumber)) + 1 : 1;
+    setEditingChapter(null);
+    setChapterNum(nextNum);
+    setChapterTitle('');
+    setChapterTitleHindi('');
+    setChapterYtUrl('');
+    setChapterDuration('1h 30m');
+    setChapterTopicsStr('');
+    setShowChapterModal(true);
+  };
+
+  const handleOpenEditChapter = (ch: ChapterItem) => {
+    setEditingChapter(ch);
+    setChapterNum(ch.chapterNumber);
+    setChapterTitle(ch.title);
+    setChapterTitleHindi(ch.titleHindi || '');
+    setChapterYtUrl(ch.youtubeUrl || (ch.youtubeVideoId ? `https://www.youtube.com/watch?v=${ch.youtubeVideoId}` : ''));
+    setChapterDuration(ch.duration || '1h 30m');
+    setChapterTopicsStr((ch.topics || []).join(', '));
+    setShowChapterModal(true);
+  };
+
+  const handleSaveChapter = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chapterTitle.trim()) return;
+
+    const ytId = cleanYouTubeId(chapterYtUrl) || 'jfKfPfyJRdk';
+    const topics = chapterTopicsStr
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const targetChapter: ChapterItem = {
+      id: editingChapter ? editingChapter.id : `${selectedManageSubjectCode.toLowerCase()}-ch-${chapterNum}-${Date.now().toString(36)}`,
+      chapterNumber: Number(chapterNum) || 1,
+      title: chapterTitle.trim(),
+      titleHindi: chapterTitleHindi.trim() || chapterTitle.trim(),
+      subjectCode: selectedManageSubjectCode,
+      classLevel: manageClass,
+      topics: topics.length > 0 ? topics : ['Board Syllabus Important Theory', 'NCERT Solutions'],
+      youtubeVideoId: ytId,
+      youtubeUrl: `https://www.youtube.com/watch?v=${ytId}`,
+      duration: chapterDuration.trim() || '1h 30m',
+    };
+
+    storageService.saveChapter(targetChapter);
+    setChaptersList(storageService.getChapters());
+    setShowChapterModal(false);
+    setChapterSavedToast(true);
+    setTimeout(() => setChapterSavedToast(false), 3000);
+    onRefreshData();
+  };
+
+  const handleDeleteChapter = (chId: string) => {
+    if (window.confirm('Are you sure you want to delete this chapter video?')) {
+      storageService.deleteChapter(chId);
+      setChaptersList(storageService.getChapters());
+      onRefreshData();
+    }
+  };
+
+  const handleSaveNewSubject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubjectName.trim()) return;
+
+    const code = newSubjectCode.trim().toUpperCase() || `${newSubjectClass.replace('Class ', '')}-${newSubjectName.slice(0, 3).toUpperCase()}`;
+    const newSub: SubjectItem = {
+      id: `sub-${code.toLowerCase()}-${Date.now().toString(36)}`,
+      name: newSubjectName.trim(),
+      nameHindi: newSubjectNameHindi.trim() || newSubjectName.trim(),
+      code: code,
+      classLevel: newSubjectClass,
+      totalChapters: Number(newSubjectChaptersCount) || 12,
+      description: newSubjectDesc.trim() || `Complete ${newSubjectName} syllabus for UP Board ${newSubjectClass}.`,
+      iconName: 'BookOpen',
+      color: 'bg-blue-600',
+    };
+
+    storageService.saveSubject(newSub);
+    setSubjectsList(storageService.getSubjects());
+    setSelectedManageSubjectCode(code);
+    setManageClass(newSubjectClass);
+    setShowSubjectModal(false);
+    setNewSubjectName('');
+    setNewSubjectNameHindi('');
+    setNewSubjectCode('');
+    onRefreshData();
+  };
+
   // Settings form
   const [channelId, setChannelId] = useState(adminSettings.youtubeChannelId);
   const [channelHandle, setChannelHandle] = useState(adminSettings.youtubeChannelHandle);
@@ -344,6 +477,35 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       setIsFetchingSupabase(false);
     }
   };
+
+  // Unified enquiries list that merges local storage enquiries and Supabase enquiries
+  const unifiedEnquiries = React.useMemo(() => {
+    const list: EnquiryItem[] = [...enquiries];
+    for (const sEnq of supabaseEnquiries) {
+      const match = list.find(
+        (e) =>
+          e.id === sEnq.id ||
+          (e.mobile && sEnq.mobile && e.mobile === sEnq.mobile && e.studentName === (sEnq.student_name || sEnq.studentName))
+      );
+      if (!match) {
+        list.push({
+          id: sEnq.id || `sp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          studentName: sEnq.student_name || sEnq.studentName || 'Student',
+          parentName: sEnq.parent_name || sEnq.parentName || '',
+          mobile: sEnq.mobile || '',
+          email: sEnq.email || '',
+          classLevel: sEnq.class_level || sEnq.classLevel || 'Class 12',
+          subject: sEnq.subject || 'Target Board Batch',
+          message: sEnq.message || '',
+          status: (sEnq.status as any) || 'new',
+          createdAt: sEnq.created_at
+            ? sEnq.created_at.slice(0, 16).replace('T', ' ')
+            : 'Recently',
+        });
+      }
+    }
+    return list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  }, [enquiries, supabaseEnquiries]);
 
   useEffect(() => {
     if (isAdminAuthenticated) {
@@ -407,20 +569,24 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Helper to extract clean YouTube ID from URL or ID
   const cleanYouTubeId = (input: string): string => {
+    if (!input) return '';
     const trimmed = input.trim();
+    const regExp = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|live\/|shorts\/|v\/))([a-zA-Z0-9_-]{11})/;
+    const match = trimmed.match(regExp);
+    if (match && match[1]) {
+      return match[1];
+    }
     if (trimmed.includes('v=')) {
       return trimmed.split('v=')[1]?.split('&')[0] || trimmed;
     }
-    if (trimmed.includes('youtu.be/')) {
-      return trimmed.split('youtu.be/')[1]?.split('?')[0] || trimmed;
-    }
-    return trimmed;
+    return trimmed.split('?')[0].split('&')[0];
   };
 
   // 1. Save Home Page Featured Video
   const handleSaveFeaturedVideo = (e: React.FormEvent) => {
     e.preventDefault();
     const idToUse = cleanYouTubeId(featVideoId);
+    const autoThumbnail = idToUse ? `https://img.youtube.com/vi/${idToUse}/hqdefault.jpg` : HERO_IMAGE;
 
     storageService.updateHomeFeaturedVideo({
       title: featTitle.trim(),
@@ -429,7 +595,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       classLevel: featClass,
       teacherName: featTeacher.trim(),
       youtubeVideoId: idToUse,
-      thumbnailUrl: HERO_IMAGE,
+      thumbnailUrl: autoThumbnail,
       isLive: featIsLive,
     });
 
@@ -721,6 +887,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('chapters-videos')}
+          className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'chapters-videos'
+              ? 'bg-red-600 text-white font-bold shadow-md shadow-red-600/20'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Youtube className="w-4 h-4 text-red-400" />
+          <span>Chapters & Videos ({chaptersList.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('enquiries')}
           className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'enquiries'
@@ -729,7 +907,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           }`}
         >
           <MessageSquare className="w-4 h-4 text-emerald-500" />
-          <span>Student Enquiries ({enquiries.length + supabaseEnquiries.length})</span>
+          <span>Student Enquiries ({unifiedEnquiries.length})</span>
         </button>
 
         <button
@@ -1111,6 +1289,240 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       )}
 
       {/* =========================================================
+          TAB: CHAPTERS & SUBJECT VIDEOS (User Requirement)
+          Manage Class, Subject, Chapter YouTube Links & Topics
+         ========================================================= */}
+      {activeTab === 'chapters-videos' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
+                  Chapter Videos, Subjects & YouTube Links Manager
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 text-[10px] font-bold uppercase">
+                  Class 9 - 12
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Edit YouTube video links, chapter titles, durations, and topics for all UP Board subjects and classes.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => {
+                  setNewSubjectClass(manageClass);
+                  setShowSubjectModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-950 hover:bg-blue-900 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-amber-400" />
+                <span>Add Subject</span>
+              </button>
+
+              <button
+                onClick={handleOpenAddChapter}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-md shadow-red-600/20 transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Chapter Video</span>
+              </button>
+            </div>
+          </div>
+
+          {chapterSavedToast && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span>Chapter video link updated and published live across public portals!</span>
+            </div>
+          )}
+
+          {/* Class Filter Bar */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] mr-1">Select Class:</span>
+            {[
+              { level: 'Class 12', label: '12 - senior secondary' },
+              { level: 'Class 11', label: '11 - pre senior secondary' },
+              { level: 'Class 10', label: '10 - secondary' },
+              { level: 'Class 9', label: '9 - pre secondary' },
+            ].map(({ level, label }) => (
+              <button
+                key={level}
+                onClick={() => setManageClass(level as ClassLevel)}
+                className={`px-3.5 py-2 rounded-xl font-semibold transition-all cursor-pointer ${
+                  manageClass === level
+                    ? 'bg-blue-950 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Subjects Filter Bar */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] mr-1">Subjects:</span>
+            {currentClassSubjects.map((sub) => (
+              <button
+                key={sub.id}
+                onClick={() => setSelectedManageSubjectCode(sub.code)}
+                className={`px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                  selectedManageSubjectCode.toUpperCase() === sub.code.toUpperCase()
+                    ? 'bg-red-600 text-white font-bold'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                <span>{sub.name}</span>
+                <span className="text-[10px] opacity-75 font-mono">({sub.code})</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Chapters List Cards */}
+          {(() => {
+            const subjectChapters = chaptersList.filter(
+              (c) => c.classLevel === manageClass && c.subjectCode.toUpperCase() === selectedManageSubjectCode.toUpperCase()
+            );
+
+            if (subjectChapters.length === 0) {
+              return (
+                <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 p-8 space-y-4">
+                  <Youtube className="w-12 h-12 text-slate-300 mx-auto" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    No chapter videos added yet for {selectedManageSubjectCode} ({manageClass}).
+                  </p>
+                  <button
+                    onClick={handleOpenAddChapter}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-bold cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add First Chapter Video</span>
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {subjectChapters
+                  .sort((a, b) => a.chapterNumber - b.chapterNumber)
+                  .map((ch) => {
+                    const ytId = ch.youtubeVideoId || cleanYouTubeId(ch.youtubeUrl || '') || 'jfKfPfyJRdk';
+                    const ytLink = ch.youtubeUrl || `https://www.youtube.com/watch?v=${ytId}`;
+                    return (
+                      <div
+                        key={ch.id}
+                        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="space-y-3">
+                          {/* Video Thumbnail Preview */}
+                          <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 group">
+                            <img
+                              src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                              alt={ch.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = HERO_IMAGE;
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                              <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg">
+                                <Play className="w-4 h-4 fill-white ml-0.5" />
+                              </div>
+                            </div>
+                            <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 text-white font-mono text-[10px]">
+                              {ch.duration || '1h 30m'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-red-600 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded">
+                              Chapter {ch.chapterNumber}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {ch.subjectCode}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h4 className="font-heading font-bold text-sm text-slate-900 dark:text-white leading-snug">
+                              {ch.title}
+                            </h4>
+                            {ch.titleHindi && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {ch.titleHindi}
+                              </p>
+                            )}
+                          </div>
+
+                          {ch.topics && ch.topics.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {ch.topics.map((t, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="text-[11px] text-slate-400 font-mono break-all bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg">
+                            <span className="text-slate-500 font-semibold">YT Link: </span>
+                            <a
+                              href={ytLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                            >
+                              <span>{ytId}</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => handleOpenEditChapter(ch)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <Edit className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Edit Link & Title</span>
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={ytLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                              title="Open on YouTube"
+                            >
+                              <Youtube className="w-4 h-4" />
+                            </a>
+
+                            <button
+                              onClick={() => handleDeleteChapter(ch.id)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                              title="Delete Chapter"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* =========================================================
           TAB 3: ENQUIRIES (From Supabase & Local)
          ========================================================= */}
       {activeTab === 'enquiries' && (
@@ -1150,7 +1562,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
-                  {enquiries.map((enq) => (
+                  {unifiedEnquiries.map((enq) => (
                     <tr key={enq.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
                       <td className="p-4">
                         <p className="font-bold text-slate-900 dark:text-white">{enq.studentName}</p>
@@ -2261,6 +2673,236 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   type="button"
                   onClick={() => setShowAddPaperModal(false)}
                   className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT CHAPTER VIDEO */}
+      {showChapterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-bold text-base text-slate-900 dark:text-white">
+                {editingChapter ? 'Edit Chapter YouTube Video' : 'Add New Chapter Video'}
+              </h3>
+              <span className="text-xs px-2 py-0.5 rounded bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 font-bold">
+                {manageClass} · {selectedManageSubjectCode}
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveChapter} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Chapter #</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={chapterNum}
+                    onChange={(e) => setChapterNum(Number(e.target.value))}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Duration (e.g. 1h 45m)</label>
+                  <input
+                    type="text"
+                    value={chapterDuration}
+                    onChange={(e) => setChapterDuration(e.target.value)}
+                    placeholder="1h 30m"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Chapter Title (English) *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Electrostatic Potential and Capacitance"
+                  value={chapterTitle}
+                  onChange={(e) => setChapterTitle(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Chapter Title (Hindi)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. स्थिरवैद्युत विभव तथा धारिता"
+                  value={chapterTitleHindi}
+                  onChange={(e) => setChapterTitleHindi(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">
+                  YouTube Video Link or ID *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="https://www.youtube.com/watch?v=... or Video ID"
+                  value={chapterYtUrl}
+                  onChange={(e) => setChapterYtUrl(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Paste the full YouTube URL or 11-digit ID. It will automatically be cleaned and linked.
+                </p>
+              </div>
+
+              {/* Live Preview of Thumbnail */}
+              {chapterYtUrl && (
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl space-y-2">
+                  <span className="text-[11px] font-semibold text-slate-500">Live Video Preview:</span>
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900 max-h-36">
+                    <img
+                      src={`https://img.youtube.com/vi/${cleanYouTubeId(chapterYtUrl)}/hqdefault.jpg`}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = HERO_IMAGE;
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Play className="w-8 h-8 text-white fill-white/80" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Important Topics (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="Coulomb’s Law, Gauss Theorem, Capacitors"
+                  value={chapterTopicsStr}
+                  onChange={(e) => setChapterTopicsStr(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer transition-colors shadow-sm"
+                >
+                  {editingChapter ? 'Update Chapter Video' : 'Save Chapter Video'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowChapterModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD NEW SUBJECT */}
+      {showSubjectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 space-y-4">
+            <h3 className="font-heading font-bold text-base text-slate-900 dark:text-white">
+              Add New Subject to Curriculum
+            </h3>
+
+            <form onSubmit={handleSaveNewSubject} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Class Level</label>
+                  <select
+                    value={newSubjectClass}
+                    onChange={(e) => setNewSubjectClass(e.target.value as ClassLevel)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                  >
+                    <option value="Class 12">Class 12</option>
+                    <option value="Class 11">Class 11</option>
+                    <option value="Class 10">Class 10</option>
+                    <option value="Class 9">Class 9</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Subject Code</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 12-BIO or 10-SCI"
+                    value={newSubjectCode}
+                    onChange={(e) => setNewSubjectCode(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Subject Name (English) *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Biology, Computer Science, Economics"
+                  value={newSubjectName}
+                  onChange={(e) => setNewSubjectName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Subject Name (Hindi)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. जीव विज्ञान, अर्थशास्त्र"
+                  value={newSubjectNameHindi}
+                  onChange={(e) => setNewSubjectNameHindi(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Total Chapters</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newSubjectChaptersCount}
+                    onChange={(e) => setNewSubjectChaptersCount(Number(e.target.value))}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Short Description</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Complete NCERT Syllabus"
+                    value={newSubjectDesc}
+                    onChange={(e) => setNewSubjectDesc(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold cursor-pointer transition-colors shadow-sm"
+                >
+                  Create Subject
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSubjectModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
