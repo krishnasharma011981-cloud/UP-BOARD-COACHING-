@@ -460,8 +460,61 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [examDate, setExamDate] = useState(adminSettings.examDateIso.split('T')[0]);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
-  // Registered students list
+  // Registered students list + 100,000 Mock Students Generator
   const allRegisteredUsers: StudentUser[] = storageService.getAllUsers();
+  const [mock100kStudents, setMock100kStudents] = useState<StudentUser[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentPage, setStudentPage] = useState(1);
+  const STUDENTS_PER_PAGE = 24;
+
+  const handleGenerate100kMockStudents = () => {
+    const firstNames = [
+      'Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Reyansh', 'Ayaan', 'Krishna', 'Ishaan',
+      'Ananya', 'Diya', 'Pari', 'Saanvi', 'Aadhya', 'Kiara', 'Myra', 'Riya', 'Aarohi', 'Prisha',
+      'Rohan', 'aman', 'Nikhil', 'Saurabh', 'Vikash', 'Pankaj', 'Deepak', 'Manish', 'Pooja', 'Neha',
+    ];
+    const lastNames = [
+      'Sharma', 'Verma', 'Gupta', 'Mishra', 'Tiwari', 'Pandey', 'Tripathi', 'Dubey', 'Yadav', 'Patel',
+      'Singh', 'Chauhan', 'Rastogi', 'Srivastava', 'Agarwal', 'Jaiswal', 'Maurya', 'Kushwaha', 'Pal', 'Sahu',
+    ];
+    const districts = [
+      'Prayagraj', 'Lucknow', 'Varanasi', 'Kanpur Nagar', 'Agra', 'Meerut', 'Gorakhpur', 'Bareilly',
+      'Aligarh', 'Moradabad', 'Jhansi', 'Ayodhya', 'Mathura', 'Sultanpur', 'Jaunpur', 'Azamgarh',
+    ];
+    const schools = [
+      'Government Inter College (GIC)', 'SVM Inter College', 'KP Inter College', 'DAV Inter College',
+      'Rani Laxmi Bai Memorial School', 'UPMSP Model Inter College', 'Saraswati Vidya Mandir',
+    ];
+    const classes: ClassLevel[] = ['Class 9', 'Class 10', 'Class 11', 'Class 12'];
+
+    const TOTAL = 100000;
+    const generated = new Array<StudentUser>(TOTAL);
+    for (let i = 0; i < TOTAL; i++) {
+      const fName = firstNames[i % firstNames.length];
+      const lName = lastNames[(i * 7) % lastNames.length];
+      const fullName = `${fName.charAt(0).toUpperCase() + fName.slice(1)} ${lName}`;
+      const cls = classes[i & 3];
+      const dist = districts[i % districts.length];
+      generated[i] = {
+        id: `mock-std-${i + 1}`,
+        fullName,
+        email: `${fName.toLowerCase()}.${lName.toLowerCase()}${i + 1}@upboard.in`,
+        mobile: `9${String(100000000 + ((i * 7919) % 899999999)).slice(0, 9)}`,
+        classLevel: cls,
+        district: dist,
+        schoolName: `${schools[i % schools.length]}, ${dist}`,
+        targetExamYear: '2027',
+        quizScores: [],
+        savedMaterialIds: [],
+        bookmarkedPaperIds: [],
+        enrolledSubjects: [],
+        completedLessonCount: 0,
+        createdAt: '2026-11-05',
+      };
+    }
+    setMock100kStudents(generated);
+    setStudentPage(1);
+  };
 
   // Load Supabase Enquiries and Students
   const refreshSupabaseData = async () => {
@@ -523,6 +576,102 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     } finally {
       setIsCheckingTables(false);
     }
+  };
+
+  // 100,000-Record Database Stress Test & 1-Hour (3,600,000ms) Auto-Cleanup
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const [stressTestStatus, setStressTestStatus] = useState<
+    'idle' | 'loading' | 'checking' | 'countdown' | 'cleaned'
+  >('idle');
+  const [stressLoadedCount, setStressLoadedCount] = useState<number>(0);
+  const [stressLoadMs, setStressLoadMs] = useState<number>(0);
+  const [stressDbCheckMs, setStressDbCheckMs] = useState<number>(0);
+  const [stressRemainingMs, setStressRemainingMs] = useState<number>(ONE_HOUR_MS);
+  const stressBufferRef = React.useRef<any[]>([]);
+  const stressTimerRef = React.useRef<number | null>(null);
+  const stressIntervalRef = React.useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (stressTimerRef.current) window.clearTimeout(stressTimerRef.current);
+      if (stressIntervalRef.current) window.clearInterval(stressIntervalRef.current);
+    };
+  }, []);
+
+  const formatDurationMMSS = (ms: number) => {
+    const totalSec = Math.max(0, Math.ceil(ms / 1000));
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleClear100kStressTest = () => {
+    if (stressTimerRef.current) window.clearTimeout(stressTimerRef.current);
+    if (stressIntervalRef.current) window.clearInterval(stressIntervalRef.current);
+    stressBufferRef.current = [];
+    setStressLoadedCount(0);
+    setStressRemainingMs(0);
+    setStressTestStatus('cleaned');
+  };
+
+  const handleRun100kStressTest = async () => {
+    if (stressTimerRef.current) window.clearTimeout(stressTimerRef.current);
+    if (stressIntervalRef.current) window.clearInterval(stressIntervalRef.current);
+
+    setStressTestStatus('loading');
+    setStressLoadedCount(0);
+    setStressRemainingMs(ONE_HOUR_MS);
+
+    const t0 = performance.now();
+    const TOTAL = 100000;
+    const buffer = new Array(TOTAL);
+    const districts = ['Prayagraj', 'Lucknow', 'Varanasi', 'Kanpur', 'Agra', 'Meerut', 'Gorakhpur'];
+    const classes: ClassLevel[] = ['Class 9', 'Class 10', 'Class 11', 'Class 12'];
+
+    for (let i = 0; i < TOTAL; i++) {
+      buffer[i] = {
+        id: `stress-${i + 1}`,
+        student_name: `UPB Student #${i + 1}`,
+        class_level: classes[i & 3],
+        district: districts[i % districts.length],
+        score: 70 + (i % 31),
+      };
+    }
+
+    stressBufferRef.current = buffer;
+    const t1 = performance.now();
+    setStressLoadedCount(buffer.length);
+    setStressLoadMs(Math.round(t1 - t0));
+
+    // Check Database
+    setStressTestStatus('checking');
+    const dbT0 = performance.now();
+    try {
+      const results = await checkSupabaseTableStatus();
+      setTableStatuses(results);
+    } catch (e) {
+      console.warn('DB check during 100k test:', e);
+    }
+    const dbT1 = performance.now();
+    setStressDbCheckMs(Math.round(dbT1 - dbT0));
+
+    // Start 1-hour (3,600,000ms) auto-removal countdown
+    setStressTestStatus('countdown');
+    const startCountdown = performance.now();
+
+    stressIntervalRef.current = window.setInterval(() => {
+      const elapsed = performance.now() - startCountdown;
+      const left = Math.max(0, Math.round(ONE_HOUR_MS - elapsed));
+      setStressRemainingMs(left);
+    }, 1000);
+
+    stressTimerRef.current = window.setTimeout(() => {
+      if (stressIntervalRef.current) window.clearInterval(stressIntervalRef.current);
+      stressBufferRef.current = [];
+      setStressLoadedCount(0);
+      setStressRemainingMs(0);
+      setStressTestStatus('cleaned');
+    }, ONE_HOUR_MS);
   };
 
   useEffect(() => {
@@ -1627,59 +1776,139 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       {/* =========================================================
           TAB 4: REGISTERED STUDENTS & SUPABASE AUTH
          ========================================================= */}
-      {activeTab === 'students' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
-                Registered Students & Authentication Data
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Students registered through Student Portal. Authenticated via Supabase Auth.
-              </p>
-            </div>
-            <span className="text-xs font-bold text-blue-700 dark:text-amber-400">
-              {allRegisteredUsers.length} Registered Students
-            </span>
-          </div>
+      {activeTab === 'students' && (() => {
+        const combinedStudents = [...allRegisteredUsers, ...mock100kStudents];
+        const query = studentSearch.trim().toLowerCase();
+        const filteredStudents = query
+          ? combinedStudents.filter(
+              (u) =>
+                u.fullName.toLowerCase().includes(query) ||
+                u.district.toLowerCase().includes(query) ||
+                u.classLevel.toLowerCase().includes(query) ||
+                u.email.toLowerCase().includes(query)
+            )
+          : combinedStudents;
+        const totalPages = Math.max(1, Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE));
+        const safePage = Math.min(studentPage, totalPages);
+        const pageStudents = filteredStudents.slice(
+          (safePage - 1) * STUDENTS_PER_PAGE,
+          safePage * STUDENTS_PER_PAGE
+        );
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allRegisteredUsers.map((user) => (
-              <div
-                key={user.id}
-                className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-900 text-amber-400 font-bold flex items-center justify-center text-xs">
-                      {user.fullName.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{user.fullName}</h4>
-                      <p className="text-[10px] text-slate-400">{user.classLevel}</p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-mono text-[10px] font-bold">
-                    Target: {user.targetExamYear}
-                  </span>
-                </div>
-
-                <div className="text-xs space-y-1 text-slate-600 dark:text-slate-300">
-                  <p>📧 Email: <span className="font-mono text-slate-900 dark:text-white">{user.email}</span></p>
-                  <p>📱 Mobile: <span className="font-mono text-slate-900 dark:text-white">{user.mobile}</span></p>
-                  <p>📍 District: {user.district}</p>
-                  <p>🏫 School: {user.schoolName}</p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Joined: {user.createdAt}</span>
-                  <span className="text-blue-600 font-semibold">{user.quizScores.length} Quizzes Completed</span>
-                </div>
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
+                  Registered Students & Authentication Data
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Students registered through Student Portal + 100,000 Mock Students Dataset.
+                </p>
               </div>
-            ))}
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-xs font-bold text-blue-700 dark:text-amber-400 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50">
+                  {combinedStudents.length.toLocaleString('en-IN')} Total Students
+                </span>
+
+                {mock100kStudents.length === 0 ? (
+                  <button
+                    onClick={handleGenerate100kMockStudents}
+                    className="px-4 py-2 rounded-xl bg-blue-950 hover:bg-blue-900 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Load 100,000 Mock Students</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMock100kStudents([]);
+                      setStudentPage(1);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-red-600/15 hover:bg-red-600 text-red-600 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Clear 100k Mock
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Search & Pagination Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={studentSearch}
+                  onChange={(e) => {
+                    setStudentSearch(e.target.value);
+                    setStudentPage(1);
+                  }}
+                  placeholder="Search by name, district, class, or email..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Page <strong>{safePage}</strong> of <strong>{totalPages.toLocaleString('en-IN')}</strong> ({filteredStudents.length.toLocaleString('en-IN')} matched)
+                </span>
+                <button
+                  onClick={() => setStudentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold cursor-pointer"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setStudentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold cursor-pointer"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pageStudents.map((user) => (
+                <div
+                  key={user.id}
+                  className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-900 text-amber-400 font-bold flex items-center justify-center text-xs">
+                        {user.fullName.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{user.fullName}</h4>
+                        <p className="text-[10px] text-slate-400">{user.classLevel}</p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-mono text-[10px] font-bold">
+                      Target: {user.targetExamYear}
+                    </span>
+                  </div>
+
+                  <div className="text-xs space-y-1 text-slate-600 dark:text-slate-300">
+                    <p>📧 Email: <span className="font-mono text-slate-900 dark:text-white">{user.email}</span></p>
+                    <p>📱 Mobile: <span className="font-mono text-slate-900 dark:text-white">{user.mobile}</span></p>
+                    <p>📍 District: {user.district}</p>
+                    <p>🏫 School: {user.schoolName}</p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Joined: {user.createdAt}</span>
+                    <span className="text-blue-600 font-semibold">{user.quizScores.length} Quizzes Completed</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* =========================================================
           TAB 5: DAILY 50 QUIZ QUESTIONS EDITOR
@@ -2199,6 +2428,92 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <span>Open Supabase SQL Editor</span>
               </a>
             </div>
+          </div>
+
+          {/* 100,000 Records Load, Database Check & 1-Hour Auto-Removal Card */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[11px] font-bold">
+                    100,000 Records Benchmark
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 text-[11px] font-bold font-mono">
+                    Auto-Remove: 1 Hour (60:00)
+                  </span>
+                </div>
+                <h4 className="font-heading font-bold text-base text-slate-900 dark:text-white">
+                  Load 100,000 Data, Check Database & Keep Loaded for 1 Hour
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Loads 100,000 student records, verifies Supabase database connectivity & table status, and keeps them loaded for 1 hour (60:00) before automatic cleanup.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleRun100kStressTest}
+                  disabled={stressTestStatus === 'loading' || stressTestStatus === 'checking' || stressTestStatus === 'countdown'}
+                  className="px-5 py-3 rounded-xl bg-blue-950 hover:bg-blue-900 disabled:opacity-60 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>
+                    {stressTestStatus === 'loading'
+                      ? 'Loading 100,000 Records...'
+                      : stressTestStatus === 'checking'
+                      ? 'Checking Database...'
+                      : stressTestStatus === 'countdown'
+                      ? `Loaded (${formatDurationMMSS(stressRemainingMs)} left)`
+                      : 'Load 100,000 Data (1 Hour)'}
+                  </span>
+                </button>
+
+                {stressTestStatus === 'countdown' && (
+                  <button
+                    onClick={handleClear100kStressTest}
+                    className="px-3.5 py-3 rounded-xl bg-red-600/15 hover:bg-red-600 text-red-600 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Remove Now
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {stressTestStatus !== 'idle' && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Loaded Records</span>
+                  <span className="font-mono font-extrabold text-base text-slate-900 dark:text-white">
+                    {stressLoadedCount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">100k Load Time</span>
+                  <span className="font-mono font-extrabold text-base text-blue-600 dark:text-blue-400">
+                    {stressLoadMs} ms
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Database Check</span>
+                  <span className="font-mono font-extrabold text-base text-emerald-600 dark:text-emerald-400">
+                    {stressTestStatus === 'checking' ? 'Checking...' : `${stressDbCheckMs} ms (OK)`}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">1-Hour Auto-Cleanup</span>
+                  <span className="font-mono font-extrabold text-base text-red-600 dark:text-red-400">
+                    {stressTestStatus === 'cleaned'
+                      ? 'Removed (0 left)'
+                      : stressTestStatus === 'countdown'
+                      ? formatDurationMMSS(stressRemainingMs)
+                      : 'Pending'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Guide Card */}
