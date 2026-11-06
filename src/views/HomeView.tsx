@@ -231,74 +231,50 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 {/* Glow backdrop */}
                 <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-amber-500 rounded-3xl opacity-20 blur-xl"></div>
 
-                {/* Hero Card Container (Managed by Admin) */}
-                <div className="relative bg-white dark:bg-slate-900 rounded-2xl p-2.5 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden group">
-                  <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-900">
-                    <img
-                      src={currentThumb}
-                      alt={featuredVideo.title}
-                      referrerPolicy="no-referrer"
-                      onError={() => {
-                        if (currentThumb.includes('maxresdefault')) {
-                          setCurrentThumb(`https://img.youtube.com/vi/${currentYtId}/hqdefault.jpg`);
-                        } else if (currentThumb !== HERO_IMAGE) {
-                          setCurrentThumb(HERO_IMAGE);
-                        }
-                      }}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                {/* Frameless Direct Clickable 16:9 Video */}
+                <div
+                  onClick={handleOpenFeatured}
+                  className="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 shadow-2xl cursor-pointer group"
+                >
+                  <img
+                    src={currentThumb}
+                    alt={featuredVideo.title}
+                    referrerPolicy="no-referrer"
+                    onError={() => {
+                      if (currentThumb.includes('maxresdefault')) {
+                        setCurrentThumb(`https://img.youtube.com/vi/${currentYtId}/hqdefault.jpg`);
+                      } else if (currentThumb !== HERO_IMAGE) {
+                        setCurrentThumb(HERO_IMAGE);
+                      }
+                    }}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
 
-                    {/* Gradient Scrim for contrast */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                  {/* Subtle bottom gradient for title readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
 
-                    {/* Live Play CTA Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <button
-                        onClick={handleOpenFeatured}
-                        className="w-16 h-16 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-2xl shadow-amber-400/50 hover:scale-110 active:scale-95 transition-all cursor-pointer"
-                        aria-label="Play current active live class"
-                      >
-                        <Play className="w-7 h-7 fill-slate-950 ml-1 text-slate-950" />
-                      </button>
-                    </div>
-
-                    {/* Bottom Floating Info */}
-                    <div className="absolute bottom-3 left-3 right-3 text-white">
-                      <div className="flex items-center gap-2 mb-1">
-                        {featuredVideo.isLive && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 tracking-wider uppercase">
-                            LIVE STREAM
-                          </span>
-                        )}
-                        <span className="text-xs text-slate-300">
-                          {featuredVideo.subject} · {featuredVideo.classLevel}
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold line-clamp-1 text-slate-100">
-                        {featuredVideo.title}
-                      </p>
+                  {/* Center Play Button */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow-2xl shadow-amber-400/50 group-hover:scale-110 active:scale-95 transition-all">
+                      <Play className="w-7 h-7 fill-slate-950 ml-1 text-slate-950" />
                     </div>
                   </div>
 
-                  {/* Card Micro Details */}
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl mt-2 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={LOGO_IMAGE}
-                        alt="UP BOARD COACHING Logo"
-                        className="w-9 h-9 rounded-full object-contain border border-amber-400 shadow-xs shrink-0"
-                      />
-                      <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">UP BOARD COACHING Live</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">{featuredVideo.teacherName}</p>
-                      </div>
+                  {/* Bottom Floating Title */}
+                  <div className="absolute bottom-3 left-3.5 right-3.5 text-white">
+                    <div className="flex items-center gap-2 mb-1">
+                      {featuredVideo.isLive && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 tracking-wider uppercase">
+                          LIVE STREAM
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-200 font-medium">
+                        {featuredVideo.subject} · {featuredVideo.classLevel}
+                      </span>
                     </div>
-                    <button
-                      onClick={handleOpenFeatured}
-                      className="px-3 py-1.5 rounded-lg bg-blue-950 hover:bg-blue-800 text-white text-xs font-semibold cursor-pointer"
-                    >
-                      Join Class &rarr;
-                    </button>
+                    <p className="text-xs sm:text-sm font-bold line-clamp-1 text-white">
+                      {featuredVideo.title}
+                    </p>
                   </div>
                 </div>
 
