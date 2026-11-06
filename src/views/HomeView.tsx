@@ -76,7 +76,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenPdfViewer,
 }) => {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
-  const activeLiveClass = liveClasses.find((c) => c.isLiveNow) || liveClasses[0];
+  const activeLiveClass: LiveClassItem = liveClasses.find((c) => c.isLiveNow) ||
+    liveClasses[0] || {
+      id: 'default-live',
+      title: 'UP Board Live Master Class',
+      titleHindi: 'यूपी बोर्ड लाइव मास्टर क्लास',
+      subject: 'Science',
+      classLevel: currentUser?.classLevel || 'Class 10',
+      teacherName: 'UP Board Faculty',
+      youtubeVideoId: 'jfKfPfyJRdk',
+      isLiveNow: true,
+      scheduledTime: 'Live Now',
+      viewersCount: 120,
+    };
 
   const featuredVideo = adminSettings?.homeFeaturedVideo || {
     title: activeLiveClass.title,
@@ -91,7 +103,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     isLive: true,
   };
 
-  const currentYtId = featuredVideo.youtubeVideoId || activeLiveClass.youtubeVideoId || 'jfKfPfyJRdk';
+  const currentYtId = featuredVideo.youtubeVideoId || activeLiveClass?.youtubeVideoId || 'jfKfPfyJRdk';
   const initialThumb =
     featuredVideo.thumbnailUrl &&
     !featuredVideo.thumbnailUrl.startsWith('/src/')
@@ -101,13 +113,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [currentThumb, setCurrentThumb] = useState<string>(initialThumb);
 
   useEffect(() => {
-    const id = featuredVideo.youtubeVideoId || activeLiveClass.youtubeVideoId || 'jfKfPfyJRdk';
+    const id = featuredVideo.youtubeVideoId || activeLiveClass?.youtubeVideoId || 'jfKfPfyJRdk';
     if (featuredVideo.thumbnailUrl && !featuredVideo.thumbnailUrl.startsWith('/src/')) {
       setCurrentThumb(featuredVideo.thumbnailUrl);
     } else {
       setCurrentThumb(`https://img.youtube.com/vi/${id}/hqdefault.jpg`);
     }
-  }, [featuredVideo.youtubeVideoId, featuredVideo.thumbnailUrl, activeLiveClass.youtubeVideoId]);
+  }, [featuredVideo.youtubeVideoId, featuredVideo.thumbnailUrl, activeLiveClass?.youtubeVideoId]);
 
   const handleOpenFeatured = () => {
     const itemToOpen: LiveClassItem = {
