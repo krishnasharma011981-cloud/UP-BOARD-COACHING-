@@ -31,8 +31,18 @@ export const HomeSliderBanner: React.FC<HomeSliderBannerProps> = ({
               onClick={() => onNavigate(slide.targetPage)}
               className={`relative w-[330px] sm:w-[540px] lg:w-[600px] shrink-0 rounded-3xl bg-gradient-to-r ${
                 slide.gradient || 'from-[#2563eb] via-[#3b38f5] to-[#6338f7]'
-              } text-white overflow-hidden shadow-lg hover:shadow-xl cursor-pointer transition-shadow duration-300 group min-h-[230px] flex items-center justify-between px-6 py-6 sm:px-8`}
+              } text-white overflow-hidden shadow-lg hover:shadow-xl cursor-pointer transition-shadow duration-300 group h-[230px] flex items-center justify-between ${
+                slide.isFounderSlide && slide.imageUrl ? 'p-0' : 'px-6 py-6 sm:px-8'
+              }`}
             >
+              {slide.isFounderSlide && slide.imageUrl ? (
+                <img
+                  src={slide.imageUrl}
+                  alt={slide.title}
+                  className="w-full h-full object-cover object-center"
+                />
+              ) : (
+                <>
               {/* Soft curved wave / circle shapes matching reference design */}
               <div className="absolute -right-12 -bottom-16 w-64 h-64 rounded-full bg-white/10 pointer-events-none" />
               <div className="absolute right-16 -top-20 w-56 h-56 rounded-full bg-white/5 pointer-events-none" />
@@ -109,6 +119,8 @@ export const HomeSliderBanner: React.FC<HomeSliderBannerProps> = ({
                   </div>
                 )}
               </div>
+                </>
+              )}
             </div>
           ))}
         </div>

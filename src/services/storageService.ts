@@ -18,7 +18,7 @@ import {
   SubjectItem,
   HomeSliderItem,
 } from '../types';
-import founderImg from '../assets/images/founder_side_angle_1793941932844.jpg';
+import expertsBannerWide from '../assets/images/experts_banner_wide_1793943292634.jpg';
 import {
   INITIAL_ADMIN_SETTINGS,
   LIVE_CLASSES_DATA,
@@ -28,6 +28,9 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_ENQUIRIES,
   SUBJECTS_DATA,
+  HERO_IMAGE,
+  TEACHER_STUDIO_IMAGE,
+  STUDY_NOTES_IMAGE,
 } from '../data/mockData';
 import { ALL_CHAPTERS_DATA } from '../data/chaptersData';
 import { FIFTY_LIVE_QUIZZES, FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
@@ -53,15 +56,15 @@ const STORAGE_KEYS = {
 export const DEFAULT_HOME_SLIDERS: HomeSliderItem[] = [
   {
     id: 'slide-founder',
-    badge: 'OUR FOUNDER',
+    badge: 'OUR FOUNDER & EXPERTS',
     title: 'Dr. Ashish Pandey',
     subtitle: 'Ph.D. in English · Founder & Managing Director',
     description:
-      'Dedicated to empowering every UP Board student (Class 9–12) with free, high-quality NCERT & UPMSP board exam preparation.',
+      'UP Board Coaching Experts — Committed for student success across Class 9, 10, 11 & 12.',
     ctaText: 'About Our Mission',
     targetPage: 'about',
     gradient: 'from-[#0066eb] via-[#0052cc] to-[#003d99]',
-    imageUrl: founderImg,
+    imageUrl: expertsBannerWide,
     isFounderSlide: true,
   },
   {
@@ -74,6 +77,7 @@ export const DEFAULT_HOME_SLIDERS: HomeSliderItem[] = [
     ctaText: 'Open PYQ Section',
     targetPage: 'previous-year-papers',
     gradient: 'from-[#2563eb] via-[#4338ca] to-[#6338f7]',
+    imageUrl: STUDY_NOTES_IMAGE,
   },
   {
     id: 'slide-quiz50',
@@ -85,6 +89,7 @@ export const DEFAULT_HOME_SLIDERS: HomeSliderItem[] = [
     ctaText: 'Start 50-Q Live Quiz',
     targetPage: 'live-quiz',
     gradient: 'from-[#1d4ed8] via-[#3b38f5] to-[#5b21b6]',
+    imageUrl: HERO_IMAGE,
   },
   {
     id: 'slide-notes',
@@ -96,6 +101,7 @@ export const DEFAULT_HOME_SLIDERS: HomeSliderItem[] = [
     ctaText: 'Browse Notes & PPTs',
     targetPage: 'study-material',
     gradient: 'from-[#0284c7] via-[#0066eb] to-[#1e40af]',
+    imageUrl: STUDY_NOTES_IMAGE,
   },
   {
     id: 'slide-live',
@@ -107,6 +113,7 @@ export const DEFAULT_HOME_SLIDERS: HomeSliderItem[] = [
     ctaText: 'Watch Live Classes',
     targetPage: 'live-classes',
     gradient: 'from-[#2563eb] via-[#3b38f5] to-[#6338f7]',
+    imageUrl: TEACHER_STUDIO_IMAGE,
   },
 ];
 
