@@ -686,23 +686,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setTimeout(() => setCopiedSql(false), 2500);
   };
 
-  // Admin Login Handler
+  // Admin Login Handler (Strict PIN verification)
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanUser = adminUsername.trim().toLowerCase();
     const cleanPass = adminPassword.trim();
 
-    // Secure credentials check or Master PIN '2027'
-    if (
-      cleanPass === '2027' ||
-      cleanPass === 'UpBoard@Admin2027' ||
-      (cleanUser.includes('admin') && cleanPass.length >= 4)
-    ) {
+    if (cleanPass === '2027' || cleanPass === 'UpBoard@Admin2027') {
       sessionStorage.setItem('upboard_admin_auth', 'true');
       setIsAdminAuthenticated(true);
       setAdminLoginError(null);
     } else {
-      setAdminLoginError('Invalid Administrator credentials or PIN. (Default PIN: 2027)');
+      setAdminLoginError('Invalid Administrator PIN. Please enter valid Master PIN.');
     }
   };
 

@@ -486,12 +486,28 @@ class StorageService {
   }
 
   // --- Download Official Document Helper (Formatted Visual Document Blob) ---
-  downloadResource(title: string, type: 'pdf' | 'ppt' | 'notes', details: Record<string, any> = {}): void {
+  downloadResource(title: string, _type: 'pdf' | 'ppt' | 'notes', details: Record<string, any> = {}): void {
+    const escapeHtml = (str: string) =>
+      String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const safeTitle = escapeHtml(title);
+    const safeSummary = escapeHtml(
+      details.summary || 'NCERT and UP Board syllabus compliant notes prepared by senior coaching evaluators.'
+    );
+    const safeTopics = Array.isArray(details.keyTopics)
+      ? details.keyTopics.map((t: string) => `<li>${escapeHtml(t)}</li>`).join('')
+      : '';
+
     const formattedHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>${title} - UP BOARD COACHING</title>
+  <title>${safeTitle} - UP BOARD COACHING</title>
   <style>
     @page { size: A4; margin: 15mm; }
     body { font-family: 'Mukta', 'Segoe UI', Arial, sans-serif; color: #0f172a; padding: 25px; line-height: 1.6; }
@@ -507,15 +523,15 @@ class StorageService {
 <body>
   <div class="header">
     <div class="badge">UTTAR PRADESH MADHYAMIK SHIKSHA PARISHAD (UPMSP)</div>
-    <h1 class="title">${title}</h1>
+    <h1 class="title">${safeTitle}</h1>
     <p style="color: #64748b; font-size: 12pt; margin-top: 4px;">Official Study Material & Student Resource Portal</p>
   </div>
   <div class="box">
     <div class="box-title">📖 Chapter Summary & Revision Highlights</div>
-    <p>${details.summary || 'NCERT and UP Board syllabus compliant notes prepared by senior coaching evaluators.'}</p>
+    <p>${safeSummary}</p>
     ${
-      details.keyTopics && details.keyTopics.length > 0
-        ? `<div style="margin-top: 14px;"><strong>Key Topics Covered:</strong><ul class="topic-list">${details.keyTopics.map((t: string) => `<li>${t}</li>`).join('')}</ul></div>`
+      safeTopics
+        ? `<div style="margin-top: 14px;"><strong>Key Topics Covered:</strong><ul class="topic-list">${safeTopics}</ul></div>`
         : ''
     }
   </div>
