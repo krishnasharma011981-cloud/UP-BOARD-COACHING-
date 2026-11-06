@@ -203,6 +203,19 @@ export default function App() {
   const [questionPapers, setQuestionPapers] = useState(() => storageService.getQuestionPapers());
   const [notifications, setNotifications] = useState(() => storageService.getNotifications());
 
+  // Class-based Student Pipeline: when logged in, show only content matching student's classLevel
+  const activeStudentClass = currentUser?.classLevel;
+  const pipelinedLiveClasses = activeStudentClass
+    ? liveClasses.filter((c) => c.classLevel === activeStudentClass)
+    : liveClasses;
+  const pipelinedStudyMaterials = activeStudentClass
+    ? studyMaterials.filter((m) => m.classLevel === activeStudentClass)
+    : studyMaterials;
+  const pipelinedQuestionPapers = activeStudentClass
+    ? questionPapers.filter((p) => p.classLevel === activeStudentClass)
+    : questionPapers;
+  const pipelinedNotifications = notifications;
+
   // Auto-subscribe to real-time UPMSP updates from upmspService
   useEffect(() => {
     const unsubscribe = upmspService.subscribe((liveNotifs) => {
@@ -296,13 +309,23 @@ export default function App() {
       <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {currentPage === 'home' && (
           <HomeView
-            onNavigate={navigateTo}
+            onNavigate={(page) => {
+              if (
+                activeStudentClass &&
+                (page === 'class-9' || page === 'class-10' || page === 'class-11' || page === 'class-12')
+              ) {
+                const lockedPage = activeStudentClass.toLowerCase().replace(/\s+/g, '-') as PageView;
+                navigateTo(lockedPage);
+                return;
+              }
+              navigateTo(page);
+            }}
             onOpenLiveClass={(item) => setSelectedLiveClass(item)}
             onOpenEnquiry={() => setIsEnquiryModalOpen(true)}
-            liveClasses={liveClasses}
-            studyMaterials={studyMaterials}
-            questionPapers={questionPapers}
-            notifications={notifications}
+            liveClasses={pipelinedLiveClasses}
+            studyMaterials={pipelinedStudyMaterials}
+            questionPapers={pipelinedQuestionPapers}
+            notifications={pipelinedNotifications}
             currentUser={currentUser}
             reminders={reminders}
             onToggleReminder={handleToggleReminder}
@@ -320,7 +343,7 @@ export default function App() {
         >
           {currentPage === 'live-classes' && (
           <LiveClassesView
-            liveClasses={liveClasses}
+            liveClasses={pipelinedLiveClasses}
             onOpenPlayer={(item) => setSelectedLiveClass(item)}
             reminders={reminders}
             onToggleReminder={handleToggleReminder}
@@ -329,6 +352,7 @@ export default function App() {
 
         {currentPage === 'live-quiz' && (
           <LiveQuizView
+            lockedClassLevel={activeStudentClass}
             onScoreSave={() => {
               setCurrentUser(storageService.getCurrentUser());
             }}
@@ -400,7 +424,7 @@ export default function App() {
 
         {currentPage === 'study-material' && (
           <StudyMaterialView
-            materials={studyMaterials}
+            materials={pipelinedStudyMaterials}
             savedMaterialIds={currentUser?.savedMaterialIds || []}
             onToggleBookmark={handleToggleBookmarkMaterial}
             currentUserFullName={currentUser?.fullName}
@@ -410,7 +434,7 @@ export default function App() {
 
         {currentPage === 'previous-year-papers' && (
           <QuestionPapersView
-            papers={questionPapers}
+            papers={pipelinedQuestionPapers}
             bookmarkedPaperIds={currentUser?.bookmarkedPaperIds || []}
             onToggleBookmark={handleToggleBookmarkPaper}
             currentUserFullName={currentUser?.fullName}
@@ -420,7 +444,7 @@ export default function App() {
 
         {currentPage === 'notifications' && (
           <NotificationsView
-            notifications={notifications}
+            notifications={pipelinedNotifications}
             onNavigate={navigateTo}
             onRefreshData={refreshAllData}
           />

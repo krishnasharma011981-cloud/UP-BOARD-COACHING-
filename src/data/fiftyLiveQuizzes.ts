@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { PracticeQuizQuestion } from '../types';
+import { PracticeQuizQuestion, ClassLevel } from '../types';
 
 export interface FiftyQuizQuestion extends PracticeQuizQuestion {
   questionNumber: number;
-  classLevel: 'Class 10' | 'Class 12';
+  classLevel: ClassLevel;
   subject: string;
 }
 
@@ -632,3 +632,21 @@ export const FIFTY_LIVE_QUIZZES: FiftyQuizQuestion[] = [
     topic: 'हिंदी गद्य साहित्य',
   },
 ];
+
+export function getClassFiftyQuizzes(classLevel: ClassLevel): FiftyQuizQuestion[] {
+  const isJunior = classLevel === 'Class 9' || classLevel === 'Class 10';
+  const primaryPool = FIFTY_LIVE_QUIZZES.filter((q) =>
+    isJunior ? q.classLevel === 'Class 10' : q.classLevel === 'Class 12'
+  );
+  const secondaryPool = FIFTY_LIVE_QUIZZES.filter((q) =>
+    isJunior ? q.classLevel !== 'Class 10' : q.classLevel !== 'Class 12'
+  );
+  const combined = [...primaryPool, ...secondaryPool].slice(0, 50);
+
+  return combined.map((q, idx) => ({
+    ...q,
+    questionNumber: idx + 1,
+    id: `${classLevel.toLowerCase().replace(/\s+/g, '-')}-q-${idx + 1}`,
+    classLevel,
+  }));
+}

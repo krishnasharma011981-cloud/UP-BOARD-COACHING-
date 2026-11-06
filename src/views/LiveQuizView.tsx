@@ -20,26 +20,29 @@ import {
   ChevronRight,
   BookOpen,
 } from 'lucide-react';
-import { FIFTY_LIVE_QUIZZES, FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
+import { FIFTY_LIVE_QUIZZES, FiftyQuizQuestion, getClassFiftyQuizzes } from '../data/fiftyLiveQuizzes';
+import { ClassLevel } from '../types';
 import { storageService } from '../services/storageService';
 import { LOGO_IMAGE } from '../data/mockData';
 import { recordSupabaseQuizScore } from '../lib/supabase';
 
 interface LiveQuizViewProps {
   onScoreSave?: (score: number, total: number) => void;
+  lockedClassLevel?: ClassLevel;
 }
 
-export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave }) => {
+export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave, lockedClassLevel }) => {
+  const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(lockedClassLevel || null);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
-  const [activeFilter, setActiveFilter] = useState<'all' | 'class-10' | 'class-12' | 'physics' | 'chemistry' | 'math' | 'hindi'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'physics' | 'chemistry' | 'math' | 'hindi'>('all');
   const [viewMode, setViewMode] = useState<'line-by-line' | 'single-focus'>('line-by-line');
   const [focusedQuestionIdx, setFocusedQuestionIdx] = useState(0);
 
+  const activeClassQuizzes = selectedClass ? getClassFiftyQuizzes(selectedClass) : [];
+
   // Filter questions
-  const filteredQuestions = FIFTY_LIVE_QUIZZES.filter((q) => {
-    if (activeFilter === 'class-10') return q.classLevel === 'Class 10';
-    if (activeFilter === 'class-12') return q.classLevel === 'Class 12';
-    if (activeFilter === 'physics') return q.subject.includes('Physics') || q.subject.includes('भौतिक');
+  const filteredQuestions = activeClassQuizzes.filter((q) => {
+    if (activeFilter === 'physics') return q.subject.includes('Physics') || q.subject.includes('भौतिक') || q.subject.includes('Science') || q.subject.includes('विज्ञान');
     if (activeFilter === 'chemistry') return q.subject.includes('Chemistry') || q.subject.includes('रसायन');
     if (activeFilter === 'math') return q.subject.includes('Math') || q.subject.includes('गणित');
     if (activeFilter === 'hindi') return q.subject.includes('Hindi') || q.subject.includes('हिंदी');
@@ -51,7 +54,7 @@ export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave }) => {
   let incorrectCount = 0;
   Object.entries(selectedAnswers).forEach(([qNumStr, ansIdx]) => {
     const qNum = parseInt(qNumStr, 10);
-    const q = FIFTY_LIVE_QUIZZES.find((item) => item.questionNumber === qNum);
+    const q = activeClassQuizzes.find((item) => item.questionNumber === qNum);
     if (q) {
       if (ansIdx === q.correctIndex) {
         correctCount += 1;
@@ -66,8 +69,14 @@ export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave }) => {
 
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
+  const handleSelectClass = (cls: ClassLevel) => {
+    setSelectedClass(cls);
+    setSelectedAnswers({});
+    setFocusedQuestionIdx(0);
+    setActiveFilter('all');
+  };
+
   const handleSelectOption = (questionNumber: number, optionIndex: number) => {
-    // If already clicked, student can change or keep it
     setSelectedAnswers((prev) => ({
       ...prev,
       [questionNumber]: optionIndex,
@@ -82,9 +91,10 @@ export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave }) => {
   };
 
   const handleSaveToPortal = () => {
+    const quizTitle = `${selectedClass || 'UP Board'} 50-MCQ Live Quiz Marathon`;
     storageService.recordQuizScore(
-      'fifty-live-quiz-marathon',
-      'UP Board Live Quiz 50 Marathon',
+      `fifty-live-quiz-${(selectedClass || 'all').toLowerCase().replace(/\s+/g, '-')}`,
+      quizTitle,
       correctCount,
       50
     );
@@ -92,7 +102,7 @@ export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave }) => {
     if (currentUser) {
       recordSupabaseQuizScore(
         currentUser.id,
-        'UP Board Live Quiz 50 Marathon',
+        quizTitle,
         correctCount,
         50
       );
@@ -103,6 +113,62 @@ export const LiveQuizView: React.FC<LiveQuizViewProps> = ({ onScoreSave }) => {
     setSaveSuccessMsg(`🎉 आपका स्कोर (${correctCount}/50) स्टूडेंट पोर्टल में सुरक्षित हो गया है!`);
     setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
+
+  if (!selectedClass) {
+    const classCards: { level: ClassLevel; badge: string; title: string; subtitle: string; color: string }[] = [
+      { level: 'Class 12', badge: '12th', title: '12 - Senior Secondary', subtitle: 'Physics, Chemistry, Math, Biology & Hindi · 50 MCQs', color: 'bg-blue-100 text-blue-900' },
+      { level: 'Class 11', badge: '11th', title: '11 - Pre Senior Secondary', subtitle: 'Mechanics, Organic Basics, Vectors & Grammar · 50 MCQs', color: 'bg-cyan-100 text-cyan-900' },
+      { level: 'Class 10', badge: '10th', title: '10 - Secondary', subtitle: 'Science, Math, Social Science & Hindi · 50 MCQs', color: 'bg-emerald-100 text-emerald-900' },
+      { level: 'Class 9', badge: '9th', title: '9 - Pre Secondary', subtitle: 'NCERT Science, Math & Hindi/English · 50 MCQs', color: 'bg-amber-100 text-amber-900' },
+    ];
+
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <div className="text-center space-y-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            UP Board 50-Question Live Quiz
+          </span>
+          <h1 className="text-2xl sm:text-4xl font-heading font-extrabold text-slate-900 dark:text-white">
+            Select Your Class to Start 50-MCQ Quiz
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+            Apni class chunein — har class ke liye 50 mahatvapurna UP Board OMR MCQs aur instant explanation taiyar hain.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {classCards.map((c) => (
+            <button
+              key={c.level}
+              onClick={() => handleSelectClass(c.level)}
+              className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 hover:border-blue-500 hover:shadow-xl transition-all text-left flex flex-col justify-between group cursor-pointer"
+            >
+              <div className="space-y-4">
+                <div className={`w-12 h-12 rounded-xl ${c.color} flex items-center justify-center font-heading font-extrabold text-lg group-hover:scale-105 transition-transform`}>
+                  {c.badge}
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-lg text-slate-900 dark:text-white group-hover:text-blue-700 transition-colors">
+                    {c.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {c.subtitle}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-6">
+                <span className="w-full py-2.5 px-4 rounded-xl bg-blue-950 group-hover:bg-blue-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors">
+                  <span>Start 50-MCQ Quiz</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
