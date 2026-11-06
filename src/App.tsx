@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { PageView, StudentUser, LiveClassItem, PracticeQuiz, ClassLevel } from './types';
 import { storageService } from './services/storageService';
 import { Navbar } from './components/Navbar';
@@ -15,20 +15,24 @@ import { EnquiryModal } from './components/EnquiryModal';
 import { StudentNotificationDrawer } from './components/StudentNotificationDrawer';
 import { PdfViewerModal } from './components/PdfViewerModal';
 
-// Views
+// Views (HomeView loaded eagerly; all other pages lazy-loaded)
 import { HomeView } from './views/HomeView';
-import { LiveClassesView } from './views/LiveClassesView';
-import { ClassDetailView } from './views/ClassDetailView';
-import { CoursesView } from './views/CoursesView';
-import { StudyMaterialView } from './views/StudyMaterialView';
-import { QuestionPapersView } from './views/QuestionPapersView';
-import { NotificationsView } from './views/NotificationsView';
-import { ExamCalendarView } from './views/ExamCalendarView';
-import { StudentPortalView } from './views/StudentPortalView';
-import { LiveQuizView } from './views/LiveQuizView';
-import { AdminDashboardView } from './views/AdminDashboardView';
-import { AboutView, ContactView, FaqView, PrivacyView, TermsView } from './views/SupportViews';
-import { NotFoundView } from './views/NotFoundView';
+const LiveClassesView = lazy(() => import('./views/LiveClassesView').then((m) => ({ default: m.LiveClassesView })));
+const ClassDetailView = lazy(() => import('./views/ClassDetailView').then((m) => ({ default: m.ClassDetailView })));
+const CoursesView = lazy(() => import('./views/CoursesView').then((m) => ({ default: m.CoursesView })));
+const StudyMaterialView = lazy(() => import('./views/StudyMaterialView').then((m) => ({ default: m.StudyMaterialView })));
+const QuestionPapersView = lazy(() => import('./views/QuestionPapersView').then((m) => ({ default: m.QuestionPapersView })));
+const NotificationsView = lazy(() => import('./views/NotificationsView').then((m) => ({ default: m.NotificationsView })));
+const ExamCalendarView = lazy(() => import('./views/ExamCalendarView').then((m) => ({ default: m.ExamCalendarView })));
+const StudentPortalView = lazy(() => import('./views/StudentPortalView').then((m) => ({ default: m.StudentPortalView })));
+const LiveQuizView = lazy(() => import('./views/LiveQuizView').then((m) => ({ default: m.LiveQuizView })));
+const AdminDashboardView = lazy(() => import('./views/AdminDashboardView').then((m) => ({ default: m.AdminDashboardView })));
+const AboutView = lazy(() => import('./views/SupportViews').then((m) => ({ default: m.AboutView })));
+const ContactView = lazy(() => import('./views/SupportViews').then((m) => ({ default: m.ContactView })));
+const FaqView = lazy(() => import('./views/SupportViews').then((m) => ({ default: m.FaqView })));
+const PrivacyView = lazy(() => import('./views/SupportViews').then((m) => ({ default: m.PrivacyView })));
+const TermsView = lazy(() => import('./views/SupportViews').then((m) => ({ default: m.TermsView })));
+const NotFoundView = lazy(() => import('./views/NotFoundView').then((m) => ({ default: m.NotFoundView })));
 import { upmspService } from './services/upmspService';
 
 // Primary URL routes mapping
@@ -307,7 +311,14 @@ export default function App() {
           />
         )}
 
-        {currentPage === 'live-classes' && (
+        <Suspense
+          fallback={
+            <div className="min-h-[60vh] flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          {currentPage === 'live-classes' && (
           <LiveClassesView
             liveClasses={liveClasses}
             onOpenPlayer={(item) => setSelectedLiveClass(item)}
@@ -475,6 +486,7 @@ export default function App() {
             }
           />
         )}
+        </Suspense>
       </main>
 
       {/* 3. PROFESSIONAL FOOTER (No admin link) */}
