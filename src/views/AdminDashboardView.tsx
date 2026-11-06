@@ -1909,6 +1909,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       <img
                         src={s.imageUrl}
                         alt={s.title}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src =
+                            '/assets/images/experts_banner_wide_1793943292634.jpg';
+                        }}
                         className="w-14 h-14 rounded-xl object-cover object-top border-2 border-amber-400 shrink-0"
                       />
                     )}

@@ -14,6 +14,7 @@ import { MockTestModal } from './components/MockTestModal';
 import { EnquiryModal } from './components/EnquiryModal';
 import { StudentNotificationDrawer } from './components/StudentNotificationDrawer';
 import { PdfViewerModal } from './components/PdfViewerModal';
+import { StudentWelcomeNoticeModal } from './components/StudentWelcomeNoticeModal';
 
 // Views (HomeView loaded eagerly; all other pages lazy-loaded)
 import { HomeView } from './views/HomeView';
@@ -564,6 +565,12 @@ export default function App() {
           document={selectedPdfDoc}
         />
       )}
+
+      {/* One-time Login Notice Modal (Image 2 Requirement) */}
+      <StudentWelcomeNoticeModal
+        onNavigate={navigateTo}
+        isLoggedIn={!!currentUser}
+      />
     </div>
   );
 }

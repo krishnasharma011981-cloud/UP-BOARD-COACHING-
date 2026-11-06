@@ -56,6 +56,7 @@ export interface LiveClassItem {
   youtubeVideoId: string;
   viewersCount: number;
   description: string;
+  thumbnailUrl?: string;
   pptDownloadUrl?: string;
   pdfNotesUrl?: string;
   formulaSheetUrl?: string;

@@ -4,19 +4,21 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, AlertTriangle, ChevronRight, Sparkles } from 'lucide-react';
+import { Calendar, Clock, ChevronRight } from 'lucide-react';
 import { PageView } from '../types';
 
 interface ExamCountdownWidgetProps {
   targetDateIso?: string;
   examTitle?: string;
   onNavigate: (page: PageView) => void;
+  studentClass?: string;
 }
 
 export const ExamCountdownWidget: React.FC<ExamCountdownWidgetProps> = ({
   targetDateIso = '2027-02-18T08:30:00.000Z',
-  examTitle = 'UP Board High School & Intermediate Examination 2027',
+  examTitle,
   onNavigate,
+  studentClass,
 }) => {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
@@ -25,6 +27,14 @@ export const ExamCountdownWidget: React.FC<ExamCountdownWidgetProps> = ({
     seconds: 0,
     isPassed: false,
   });
+
+  const displayTitle =
+    examTitle ||
+    (studentClass === 'Class 10'
+      ? 'UP Board High School (Class 10) Examination 2027'
+      : studentClass === 'Class 12'
+      ? 'UP Board Intermediate (Class 12) Examination 2027'
+      : 'UP Board High School & Intermediate Examination 2027');
 
   useEffect(() => {
     const calculateTime = () => {
@@ -51,83 +61,87 @@ export const ExamCountdownWidget: React.FC<ExamCountdownWidgetProps> = ({
   }, [targetDateIso]);
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl border border-blue-800/40">
-      {/* Decorative ambient backdrop */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative overflow-hidden bg-gradient-to-r from-[#0c1836] via-[#0f224d] to-[#0c1836] rounded-3xl p-5 sm:p-8 text-white shadow-2xl border border-blue-900/50">
+      {/* Subtle ambient lighting */}
+      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
-        {/* Left Info */}
-        <div className="space-y-2 text-center lg:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-xs font-semibold">
-            <Clock className="w-3.5 h-3.5" />
+        {/* Left Info Column */}
+        <div className="space-y-2.5 text-center lg:text-left flex-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-xs font-bold tracking-wide">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
             <span>Official UPMSP Exam Countdown</span>
           </div>
 
-          <h3 className="text-xl sm:text-2xl font-heading font-bold text-white tracking-tight">
-            {examTitle}
+          <h3 className="text-xl sm:text-2xl lg:text-[26px] font-heading font-extrabold text-white tracking-tight leading-snug">
+            {displayTitle}
           </h3>
 
-          <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl">
             Target 95%+ marks. Revise high-weightage derivations, solve official model papers,
             and complete previous 5-year question papers with teacher solutions.
           </p>
         </div>
 
-        {/* Center / Right Countdown Numbers */}
-        <div className="flex items-center justify-center gap-1.5 sm:gap-4 w-full sm:w-auto max-w-full">
-          <div className="flex-1 sm:flex-initial flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+        {/* Center 4 Countdown Numbers (Image 1 Style) */}
+        <div className="flex items-center justify-center gap-1.5 sm:gap-3 shrink-0">
+          {/* Days */}
+          <div className="bg-[#18274c] border border-blue-800/40 rounded-2xl px-2.5 sm:px-4 py-2.5 sm:py-3.5 min-w-[62px] sm:min-w-[80px] flex flex-col items-center shadow-inner">
             <span className="text-xl sm:text-3xl font-heading font-extrabold text-amber-400 tabular-nums">
               {String(timeLeft.days).padStart(2, '0')}
             </span>
-            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
-              Days
+            <span className="text-[9px] sm:text-[11px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">
+              DAYS
             </span>
           </div>
 
-          <div className="text-lg sm:text-xl font-bold text-slate-500">:</div>
+          <span className="text-slate-500 font-bold text-base sm:text-xl">:</span>
 
-          <div className="flex-1 sm:flex-initial flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+          {/* Hours */}
+          <div className="bg-[#18274c] border border-blue-800/40 rounded-2xl px-2.5 sm:px-4 py-2.5 sm:py-3.5 min-w-[62px] sm:min-w-[80px] flex flex-col items-center shadow-inner">
             <span className="text-xl sm:text-3xl font-heading font-extrabold text-white tabular-nums">
               {String(timeLeft.hours).padStart(2, '0')}
             </span>
-            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
-              Hours
+            <span className="text-[9px] sm:text-[11px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">
+              HOURS
             </span>
           </div>
 
-          <div className="text-lg sm:text-xl font-bold text-slate-500">:</div>
+          <span className="text-slate-500 font-bold text-base sm:text-xl">:</span>
 
-          <div className="flex-1 sm:flex-initial flex flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+          {/* Mins */}
+          <div className="bg-[#18274c] border border-blue-800/40 rounded-2xl px-2.5 sm:px-4 py-2.5 sm:py-3.5 min-w-[62px] sm:min-w-[80px] flex flex-col items-center shadow-inner">
             <span className="text-xl sm:text-3xl font-heading font-extrabold text-white tabular-nums">
               {String(timeLeft.minutes).padStart(2, '0')}
             </span>
-            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
-              Mins
+            <span className="text-[9px] sm:text-[11px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">
+              MINS
             </span>
           </div>
 
-          <div className="text-lg sm:text-xl font-bold text-slate-500 hidden sm:block">:</div>
+          <span className="text-slate-500 font-bold text-base sm:text-xl">:</span>
 
-          <div className="hidden sm:flex flex-1 sm:flex-initial flex-col items-center bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 min-w-[55px] sm:min-w-[80px]">
+          {/* Secs */}
+          <div className="bg-[#18274c] border border-blue-800/40 rounded-2xl px-2.5 sm:px-4 py-2.5 sm:py-3.5 min-w-[62px] sm:min-w-[80px] flex flex-col items-center shadow-inner">
             <span className="text-xl sm:text-3xl font-heading font-extrabold text-amber-400 tabular-nums">
               {String(timeLeft.seconds).padStart(2, '0')}
             </span>
-            <span className="text-[9px] sm:text-xs uppercase font-medium tracking-wider text-slate-300">
-              Secs
+            <span className="text-[9px] sm:text-[11px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">
+              SECS
             </span>
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="shrink-0">
+        {/* Action Button: View Date Sheet > */}
+        <div className="shrink-0 w-full sm:w-auto">
           <button
             onClick={() => onNavigate('exam-calendar')}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-heading font-bold text-xs transition-colors shadow-lg shadow-amber-400/20 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-heading font-bold text-xs sm:text-sm transition-all shadow-lg shadow-amber-400/25 hover:scale-[1.02] cursor-pointer"
           >
             <Calendar className="w-4 h-4" />
             <span>View Date Sheet</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

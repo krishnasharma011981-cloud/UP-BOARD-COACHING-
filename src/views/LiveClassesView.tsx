@@ -291,9 +291,12 @@ export const LiveClassesView: React.FC<LiveClassesViewProps> = ({
               <div>
                 <div className="relative aspect-video bg-black overflow-hidden group">
                   <img
-                    src={TEACHER_STUDIO_IMAGE}
+                    src={rec.thumbnailUrl || (rec.youtubeVideoId ? `https://img.youtube.com/vi/${rec.youtubeVideoId}/hqdefault.jpg` : TEACHER_STUDIO_IMAGE)}
                     alt={rec.title}
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = TEACHER_STUDIO_IMAGE;
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />

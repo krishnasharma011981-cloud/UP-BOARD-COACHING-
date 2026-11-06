@@ -17,10 +17,10 @@ import {
 } from '../types';
 
 export const LOGO_IMAGE = '/assets/aistudio/WhatsApp_Image_2026-10-20_at_18.13.43_64311f73.jpeg';
-export const HERO_IMAGE = '/src/assets/images/hero_upboard_students_1793429396730.jpg';
-export const TEACHER_STUDIO_IMAGE = '/src/assets/images/live_teacher_lecture_1793429396001.jpg';
-export const STUDY_NOTES_IMAGE = '/src/assets/images/study_notes_preview_1793429396527.jpg';
-export const TOPPER_AVATAR = '/src/assets/images/topper_student_avatar_1793429396267.jpg';
+export const HERO_IMAGE = '/assets/images/hero_upboard_students_1793429396730.jpg';
+export const TEACHER_STUDIO_IMAGE = '/assets/images/live_teacher_lecture_1793429396001.jpg';
+export const STUDY_NOTES_IMAGE = '/assets/images/study_notes_preview_1793429396527.jpg';
+export const TOPPER_AVATAR = '/assets/images/topper_student_avatar_1793429396267.jpg';
 
 export const BRAND_CONTACTS = {
   mobile1: '7518177177',

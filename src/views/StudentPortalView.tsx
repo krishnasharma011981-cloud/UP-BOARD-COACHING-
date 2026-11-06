@@ -40,6 +40,7 @@ import {
   loginStudentWithSupabase,
   SUPABASE_URL,
 } from '../lib/supabase';
+import { ExamCountdownWidget } from '../components/ExamCountdownWidget';
 
 interface StudentPortalViewProps {
   currentUser: StudentUser | null;
@@ -247,6 +248,14 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Exam Countdown Widget for 10th and 12th Board Students (Image 1 Requirement) */}
+        {(currentUser.classLevel === 'Class 10' || currentUser.classLevel === 'Class 12') && (
+          <ExamCountdownWidget
+            studentClass={currentUser.classLevel}
+            onNavigate={onNavigate}
+          />
+        )}
 
         {/* 3 Metrics Overview Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">

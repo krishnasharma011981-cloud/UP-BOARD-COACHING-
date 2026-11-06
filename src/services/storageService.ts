@@ -152,7 +152,7 @@ const DEFAULT_ADMIN_SETTINGS_WITH_VIDEO: AdminSettings = {
     classLevel: 'Class 12',
     teacherName: 'Er. Rakesh Sharma',
     youtubeVideoId: 'jfKfPfyJRdk',
-    thumbnailUrl: '/src/assets/images/hero_upboard_students_1793429396730.jpg',
+    thumbnailUrl: '/assets/images/hero_upboard_students_1793429396730.jpg',
     isLive: true,
   },
 };
@@ -559,13 +559,17 @@ class StorageService {
   getHomeSliders(): HomeSliderItem[] {
     const stored = this.safeGet<HomeSliderItem[]>(STORAGE_KEYS.HOME_SLIDERS, DEFAULT_HOME_SLIDERS);
     return stored.map((s) => {
-      if (!s.imageUrl) {
+      let img = s.imageUrl;
+      if (img && img.startsWith('/src/assets/images/')) {
+        img = img.replace('/src/assets/images/', '/assets/images/');
+      }
+      if (!img) {
         const def = DEFAULT_HOME_SLIDERS.find((d) => d.id === s.id);
         if (def?.imageUrl) {
-          return { ...s, imageUrl: def.imageUrl };
+          img = def.imageUrl;
         }
       }
-      return s;
+      return { ...s, imageUrl: img };
     });
   }
 

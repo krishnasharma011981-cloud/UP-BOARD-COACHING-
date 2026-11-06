@@ -38,12 +38,14 @@ import {
   HERO_IMAGE,
   TEACHER_STUDIO_IMAGE,
   STUDY_NOTES_IMAGE,
+  TOPPER_AVATAR,
   STUDENT_TESTIMONIALS,
   FAQ_ITEMS,
   LOGO_IMAGE,
 } from '../data/mockData';
 import { ExamCountdownWidget } from '../components/ExamCountdownWidget';
 import { HomeSliderBanner } from '../components/HomeSliderBanner';
+import { ScrollReveal } from '../components/ScrollReveal';
 import { storageService } from '../services/storageService';
 
 interface HomeViewProps {
@@ -156,8 +158,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
         onNavigate={onNavigate}
       />
 
+      {/* 10th & 12th LOGGED-IN / EXAM PREP COUNTDOWN TIMER (Image 1 Requirement) */}
+      {(currentUser?.classLevel === 'Class 10' || currentUser?.classLevel === 'Class 12' || !currentUser) && (
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ExamCountdownWidget
+            studentClass={currentUser?.classLevel}
+            onNavigate={onNavigate}
+          />
+        </ScrollReveal>
+      )}
+
       {/* COURSES & CLASSES QUICK-ACCESS PANEL (12th, 11th, 10th, 9th) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
@@ -212,10 +224,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           ))}
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden pt-2 sm:pt-4">
+      <ScrollReveal className="relative overflow-hidden pt-2 sm:pt-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             
@@ -390,15 +402,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
 
         </div>
-      </section>
-
-      {/* 2. UPCOMING EXAMINATION COUNTDOWN WIDGET */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <ExamCountdownWidget onNavigate={onNavigate} />
-      </section>
+      </ScrollReveal>
 
       {/* 2.5. LIVE QUIZ 50 MARATHON SECTION (JISME LINE SE 50 QUIZ HO AUR CLICKABLE HO ANS) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-10 text-white shadow-xl border border-amber-400/30 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -487,10 +494,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           </div>
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 4. LIVE CLASSES & RECORDINGS HIGHLIGHT */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <span className="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -527,9 +534,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   {/* Thumbnail Banner */}
                   <div className="relative aspect-video bg-slate-900 overflow-hidden">
                     <img
-                      src={TEACHER_STUDIO_IMAGE}
+                      src={item.thumbnailUrl || (item.youtubeVideoId ? `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg` : TEACHER_STUDIO_IMAGE)}
                       alt={item.title}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = TEACHER_STUDIO_IMAGE;
+                      }}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
@@ -607,10 +617,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             );
           })}
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 5. NOTES & STUDY MATERIAL SPOTLIGHT */}
-      <section className="bg-slate-100/70 py-14 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
+      <ScrollReveal className="bg-slate-100/70 py-14 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
@@ -681,10 +691,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             ))}
           </div>
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 6. PREVIOUS YEAR QUESTION PAPERS (PYQ) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
@@ -799,10 +809,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           ))}
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 7. LATEST UPMSP OFFICIAL NOTIFICATIONS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
@@ -855,10 +865,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           ))}
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 8. STUDENT TOPPERS & TESTIMONIALS */}
-      <section className="bg-blue-950 text-white py-16 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+      <ScrollReveal className="bg-blue-950 text-white py-16 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
@@ -884,6 +894,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       src={t.avatar}
                       alt={t.name}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = TOPPER_AVATAR;
+                      }}
                       className="w-12 h-12 rounded-full object-cover border-2 border-amber-400"
                     />
                     <div>
@@ -907,10 +920,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             ))}
           </div>
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 9. FREQUENTLY ASKED QUESTIONS (FAQ) */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <ScrollReveal className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="text-center space-y-2">
           <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
             Clear Your Doubts
@@ -949,10 +962,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             );
           })}
         </div>
-      </section>
+      </ScrollReveal>
 
       {/* 10. ENQUIRY CALL TO ACTION BANNER */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-950 rounded-3xl p-8 sm:p-12 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8 border border-blue-700/40">
           <div className="space-y-3 text-center md:text-left max-w-xl">
             <span className="px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider">
@@ -984,7 +997,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </a>
           </div>
         </div>
-      </section>
+      </ScrollReveal>
 
     </div>
   );
