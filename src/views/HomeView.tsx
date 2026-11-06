@@ -144,6 +144,64 @@ export const HomeView: React.FC<HomeViewProps> = ({
         onNavigate={onNavigate}
       />
 
+      {/* COURSES & CLASSES QUICK-ACCESS PANEL (12th, 11th, 10th, 9th) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              page: 'class-12' as PageView,
+              title: '12th - senior secondary',
+              gradient: 'from-[#6366f1] to-[#4f46e5]',
+              btnTextColor: 'text-[#4f46e5]',
+            },
+            {
+              page: 'class-11' as PageView,
+              title: '11th - pre senior secondary',
+              gradient: 'from-[#38bdf8] to-[#2563eb]',
+              btnTextColor: 'text-[#2563eb]',
+            },
+            {
+              page: 'class-10' as PageView,
+              title: '10th - secondary',
+              gradient: 'from-[#14b8a6] to-[#0d9488]',
+              btnTextColor: 'text-[#0d9488]',
+            },
+            {
+              page: 'class-9' as PageView,
+              title: '9th - pre secondary',
+              gradient: 'from-[#f59e0b] to-[#d97706]',
+              btnTextColor: 'text-[#d97706]',
+            },
+          ].map((item) => (
+            <div
+              key={item.page}
+              onClick={() => onNavigate(item.page)}
+              className={`rounded-2xl bg-gradient-to-r ${item.gradient} p-5 text-white shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between gap-4 group`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+                  <GraduationCap className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-heading font-extrabold text-base sm:text-lg leading-snug text-white">
+                  {item.title}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate(item.page);
+                }}
+                className={`w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 ${item.btnTextColor} font-bold text-xs sm:text-sm shadow-xs transition-transform group-hover:scale-[1.01] cursor-pointer text-center`}
+              >
+                Open Courses &amp; Classes
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden pt-2 sm:pt-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

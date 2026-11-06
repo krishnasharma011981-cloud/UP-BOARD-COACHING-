@@ -1544,15 +1544,48 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">Image URL (Optional)</label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">
+                    Slide Image (Gallery Upload or URL)
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold cursor-pointer transition-colors shadow-xs">
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Upload from Gallery</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === 'string') {
+                            setSlideImageUrl(reader.result);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="text"
-                  placeholder="https://... or leave blank"
+                  placeholder="https://... or click 'Upload from Gallery'"
                   value={slideImageUrl}
                   onChange={(e) => setSlideImageUrl(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono"
                 />
+                {slideImageUrl && (
+                  <div className="relative w-32 h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900">
+                    <img
+                      src={slideImageUrl}
+                      alt="Slide Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
               </div>
 
               <button
