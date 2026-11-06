@@ -43,6 +43,7 @@ import {
   LOGO_IMAGE,
 } from '../data/mockData';
 import { ExamCountdownWidget } from '../components/ExamCountdownWidget';
+import { HomeSliderBanner } from '../components/HomeSliderBanner';
 import { storageService } from '../services/storageService';
 
 interface HomeViewProps {
@@ -135,10 +136,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   return (
-    <div className="space-y-16 sm:space-y-24 pb-16">
+    <div className="space-y-12 sm:space-y-16 pb-16">
       
+      {/* TOP AUTO-SLIDING FEATURE BANNER */}
+      <HomeSliderBanner
+        slides={storageService.getHomeSliders()}
+        onNavigate={onNavigate}
+      />
+
       {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden pt-6 sm:pt-10">
+      <section className="relative overflow-hidden pt-2 sm:pt-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             

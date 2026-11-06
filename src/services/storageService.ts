@@ -16,7 +16,9 @@ import {
   PracticeQuizQuestion,
   ChapterItem,
   SubjectItem,
+  HomeSliderItem,
 } from '../types';
+import founderImg from '../assets/images/founder_side_angle_1793941932844.jpg';
 import {
   INITIAL_ADMIN_SETTINGS,
   LIVE_CLASSES_DATA,
@@ -45,7 +47,68 @@ const STORAGE_KEYS = {
   DAILY_QUIZZES: 'upboard_daily_quizzes_50',
   CHAPTERS: 'upboard_all_chapters',
   SUBJECTS: 'upboard_all_subjects',
+  HOME_SLIDERS: 'upboard_home_sliders',
 };
+
+export const DEFAULT_HOME_SLIDERS: HomeSliderItem[] = [
+  {
+    id: 'slide-founder',
+    badge: 'OUR FOUNDER',
+    title: 'Dr. Ashish Pandey',
+    subtitle: 'Ph.D. in English · Founder & Managing Director',
+    description:
+      'Dedicated to empowering every UP Board student (Class 9–12) with free, high-quality NCERT & UPMSP board exam preparation.',
+    ctaText: 'About Our Mission',
+    targetPage: 'about',
+    gradient: 'from-[#0066eb] via-[#0052cc] to-[#003d99]',
+    imageUrl: founderImg,
+    isFounderSlide: true,
+  },
+  {
+    id: 'slide-pyq',
+    badge: 'PREVIOUS 5 YEARS PYQs',
+    title: 'UP Board Solved Question Papers (2022–2026)',
+    subtitle: 'Official Board Papers & Marking Scheme Solutions',
+    description:
+      'Click here to open Previous Year Question Papers (PYQs) with step-by-step evaluator solutions for Class 9, 10, 11 & 12.',
+    ctaText: 'Open PYQ Section',
+    targetPage: 'previous-year-papers',
+    gradient: 'from-[#2563eb] via-[#4338ca] to-[#6338f7]',
+  },
+  {
+    id: 'slide-quiz50',
+    badge: 'DAILY 50 QUESTIONS QUIZ',
+    title: 'UP Board Live OMR & 50-MCQ Practice Test',
+    subtitle: 'Instant Answers, Explanations & Live Rank',
+    description:
+      'Attempt 50 high-weightage board exam questions daily with instant solutions and real-time score tracking.',
+    ctaText: 'Start 50-Q Live Quiz',
+    targetPage: 'live-quiz',
+    gradient: 'from-[#1d4ed8] via-[#3b38f5] to-[#5b21b6]',
+  },
+  {
+    id: 'slide-notes',
+    badge: 'FREE STUDY VAULT',
+    title: 'Topper Handwritten Notes, PPTs & Formula Sheets',
+    subtitle: 'Bilingual Hindi & English Medium PDFs',
+    description:
+      'Download chapter-wise handwritten notes, revision PPTs, and important derivations prepared by state rankers.',
+    ctaText: 'Browse Notes & PPTs',
+    targetPage: 'study-material',
+    gradient: 'from-[#0284c7] via-[#0066eb] to-[#1e40af]',
+  },
+  {
+    id: 'slide-live',
+    badge: 'YOUTUBE LIVE CLASSES',
+    title: 'Daily Free Master Classes (Class 9 to 12)',
+    subtitle: 'Interactive Live Revision & Doubt Solving',
+    description:
+      'Join daily live YouTube classes, chapter marathons, and numerical problem-solving sessions with expert faculty.',
+    ctaText: 'Watch Live Classes',
+    targetPage: 'live-classes',
+    gradient: 'from-[#2563eb] via-[#3b38f5] to-[#6338f7]',
+  },
+];
 
 // Default guest / demo student
 export const DEMO_STUDENT: StudentUser = {
@@ -483,6 +546,31 @@ class StorageService {
   deleteSubject(subjectId: string): void {
     const list = this.getSubjects().filter((s) => s.id !== subjectId);
     this.safeSet(STORAGE_KEYS.SUBJECTS, list);
+  }
+
+  // --- Home Page Sliding Banner CRUD ---
+  getHomeSliders(): HomeSliderItem[] {
+    return this.safeGet<HomeSliderItem[]>(STORAGE_KEYS.HOME_SLIDERS, DEFAULT_HOME_SLIDERS);
+  }
+
+  saveHomeSlider(slider: HomeSliderItem): void {
+    const list = this.getHomeSliders();
+    const idx = list.findIndex((s) => s.id === slider.id);
+    if (idx >= 0) {
+      list[idx] = slider;
+    } else {
+      list.push(slider);
+    }
+    this.safeSet(STORAGE_KEYS.HOME_SLIDERS, list);
+  }
+
+  deleteHomeSlider(sliderId: string): void {
+    const list = this.getHomeSliders().filter((s) => s.id !== sliderId);
+    this.safeSet(STORAGE_KEYS.HOME_SLIDERS, list);
+  }
+
+  resetHomeSliders(): void {
+    this.safeSet(STORAGE_KEYS.HOME_SLIDERS, DEFAULT_HOME_SLIDERS);
   }
 
   // --- Download Official Document Helper (Formatted Visual Document Blob) ---

@@ -18,6 +18,25 @@
   }
 }
 
+@keyframes slideTrack {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-slide-track {
+  display: flex;
+  width: max-content;
+  animation: slideTrack 28s linear infinite;
+}
+
+.animate-slide-track:hover {
+  animation-play-state: paused;
+}
+
 /* Light Mode Defaults (Pure, Crisp White Theme) */
 html {
   scroll-behavior: smooth;

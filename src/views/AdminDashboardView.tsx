@@ -49,6 +49,8 @@ import {
   StudentNotificationItem,
   StudentUser,
   SubjectItem,
+  HomeSliderItem,
+  PageView,
 } from '../types';
 import { FiftyQuizQuestion } from '../data/fiftyLiveQuizzes';
 import { ChapterItem, getChapterYouTubeLink } from '../data/chaptersData';
@@ -247,7 +249,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'featured-video' | 'live' | 'chapters-videos' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
+    'featured-video' | 'home-slider' | 'live' | 'chapters-videos' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
   >('featured-video');
 
   // Supabase live data states
@@ -278,6 +280,60 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [featVideoId, setFeatVideoId] = useState(currentHomeVideo.youtubeVideoId);
   const [featIsLive, setFeatIsLive] = useState(currentHomeVideo.isLive);
   const [featSavedToast, setFeatSavedToast] = useState(false);
+
+  // Home Page Sliding Banner state
+  const [homeSliders, setHomeSliders] = useState<HomeSliderItem[]>(() => storageService.getHomeSliders());
+  const [editingSlide, setEditingSlide] = useState<HomeSliderItem | null>(null);
+  const [slideBadge, setSlideBadge] = useState('');
+  const [slideTitle, setSlideTitle] = useState('');
+  const [slideSubtitle, setSlideSubtitle] = useState('');
+  const [slideDesc, setSlideDesc] = useState('');
+  const [slideCta, setSlideCta] = useState('Explore Now');
+  const [slideTargetPage, setSlideTargetPage] = useState<PageView>('previous-year-papers');
+  const [slideGradient, setSlideGradient] = useState('from-blue-700 via-indigo-800 to-violet-900');
+  const [slideImageUrl, setSlideImageUrl] = useState('');
+  const [slideSavedToast, setSlideSavedToast] = useState(false);
+
+  const handleEditSlide = (s: HomeSliderItem) => {
+    setEditingSlide(s);
+    setSlideBadge(s.badge);
+    setSlideTitle(s.title);
+    setSlideSubtitle(s.subtitle || '');
+    setSlideDesc(s.description);
+    setSlideCta(s.ctaText);
+    setSlideTargetPage(s.targetPage);
+    setSlideGradient(s.gradient);
+    setSlideImageUrl(s.imageUrl || '');
+  };
+
+  const handleSaveSlide = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slideTitle.trim()) return;
+    const item: HomeSliderItem = {
+      id: editingSlide ? editingSlide.id : `slide-${Date.now()}`,
+      badge: slideBadge.trim() || 'FEATURED',
+      title: slideTitle.trim(),
+      subtitle: slideSubtitle.trim() || undefined,
+      description: slideDesc.trim(),
+      ctaText: slideCta.trim() || 'Open Section',
+      targetPage: slideTargetPage,
+      gradient: slideGradient,
+      imageUrl: slideImageUrl.trim() || undefined,
+      isFounderSlide: editingSlide?.isFounderSlide,
+    };
+    storageService.saveHomeSlider(item);
+    setHomeSliders(storageService.getHomeSliders());
+    setEditingSlide(null);
+    setSlideBadge('');
+    setSlideTitle('');
+    setSlideSubtitle('');
+    setSlideDesc('');
+    setSlideCta('Explore Now');
+    setSlideImageUrl('');
+    setSlideSavedToast(true);
+    setTimeout(() => setSlideSavedToast(false), 3000);
+    onRefreshData();
+  };
 
   // Live Class form modal
   const [showAddLiveModal, setShowAddLiveModal] = useState(false);
@@ -1018,6 +1074,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('home-slider')}
+          className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            activeTab === 'home-slider'
+              ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          <span>Home Slider ({homeSliders.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('live')}
           className={`px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeTab === 'live'
@@ -1339,6 +1407,234 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       {/* =========================================================
           TAB 2: LIVE CLASSES (Image 4 Requirement)
          ========================================================= */}
+      {/* =========================================================
+          TAB: HOME PAGE SLIDING BANNER MANAGER
+         ========================================================= */}
+      {activeTab === 'home-slider' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Add / Edit Slide Form (5 cols) */}
+          <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
+                  {editingSlide ? 'Edit Slider Card' : 'Add New Slider Card'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Manage slides shown in the Home Page auto-sliding banner.
+                </p>
+              </div>
+              {editingSlide && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingSlide(null);
+                    setSlideBadge('');
+                    setSlideTitle('');
+                    setSlideSubtitle('');
+                    setSlideDesc('');
+                    setSlideCta('Explore Now');
+                    setSlideImageUrl('');
+                  }}
+                  className="text-xs text-red-600 font-semibold cursor-pointer"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            {slideSavedToast && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                <span>Home slider updated and published live!</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSlide} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Badge Text *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. PREVIOUS 5 YEARS PYQs"
+                    value={slideBadge}
+                    onChange={(e) => setSlideBadge(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Target Section *</label>
+                  <select
+                    value={slideTargetPage}
+                    onChange={(e) => setSlideTargetPage(e.target.value as PageView)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                  >
+                    <option value="previous-year-papers">PYQs (Question Papers)</option>
+                    <option value="live-quiz">50 Questions Live Quiz</option>
+                    <option value="study-material">Notes & PPTs</option>
+                    <option value="live-classes">Live Classes</option>
+                    <option value="notifications">UPMSP Updates</option>
+                    <option value="courses">Courses & Classes (9–12)</option>
+                    <option value="about">About / Our Founder</option>
+                    <option value="student-portal">Student Portal</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Slide Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. UP Board Solved Question Papers (2022–2026)"
+                  value={slideTitle}
+                  onChange={(e) => setSlideTitle(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Subtitle (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ph.D. in English · Founder & Managing Director"
+                  value={slideSubtitle}
+                  onChange={(e) => setSlideSubtitle(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Description *</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Short description of what students will find when they click..."
+                  value={slideDesc}
+                  onChange={(e) => setSlideDesc(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Button Text *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Open PYQ Section"
+                    value={slideCta}
+                    onChange={(e) => setSlideCta(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Color Theme</label>
+                  <select
+                    value={slideGradient}
+                    onChange={(e) => setSlideGradient(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                  >
+                    <option value="from-slate-900 via-blue-950 to-indigo-950">Royal Navy & Indigo</option>
+                    <option value="from-blue-700 via-indigo-800 to-violet-900">Electric Blue & Violet</option>
+                    <option value="from-red-600 via-rose-700 to-amber-700">Crimson Red & Amber</option>
+                    <option value="from-emerald-700 via-teal-800 to-cyan-900">Emerald & Teal</option>
+                    <option value="from-amber-600 via-orange-700 to-red-800">Warm Gold & Orange</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 dark:text-slate-300">Image URL (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="https://... or leave blank"
+                  value={slideImageUrl}
+                  onChange={(e) => setSlideImageUrl(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white font-mono"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer transition-colors shadow-md"
+              >
+                {editingSlide ? 'Update Slide' : 'Add Slide to Home Banner'}
+              </button>
+            </form>
+          </div>
+
+          {/* Active Slides List (7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
+                Active Home Page Slides ({homeSliders.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  storageService.resetHomeSliders();
+                  setHomeSliders(storageService.getHomeSliders());
+                  onRefreshData();
+                }}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+              >
+                Reset Default Slides
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {homeSliders.map((s) => (
+                <div
+                  key={s.id}
+                  className={`rounded-2xl bg-gradient-to-r ${s.gradient} text-white p-5 shadow-sm flex items-center justify-between gap-4`}
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    {s.imageUrl && (
+                      <img
+                        src={s.imageUrl}
+                        alt={s.title}
+                        className="w-14 h-14 rounded-xl object-cover object-top border-2 border-amber-400 shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 space-y-1">
+                      <span className="inline-block px-2 py-0.5 rounded bg-white/15 text-amber-300 text-[10px] font-bold uppercase">
+                        {s.badge} → /{s.targetPage}
+                      </span>
+                      <h4 className="font-heading font-bold text-sm truncate">{s.title}</h4>
+                      <p className="text-xs text-slate-200 line-clamp-1">{s.description}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleEditSlide(s)}
+                      className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer"
+                      title="Edit Slide"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        storageService.deleteHomeSlider(s.id);
+                        setHomeSliders(storageService.getHomeSliders());
+                        onRefreshData();
+                      }}
+                      className="p-2 rounded-xl bg-red-500/30 hover:bg-red-600 text-white transition-colors cursor-pointer"
+                      title="Delete Slide"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'live' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">

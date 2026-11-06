@@ -210,3 +210,16 @@ export interface AdminSettings {
     isLive: boolean;
   };
 }
+
+export interface HomeSliderItem {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  ctaText: string;
+  targetPage: PageView;
+  gradient: string;
+  imageUrl?: string;
+  isFounderSlide?: boolean;
+}
