@@ -557,7 +557,16 @@ class StorageService {
 
   // --- Home Page Sliding Banner CRUD ---
   getHomeSliders(): HomeSliderItem[] {
-    return this.safeGet<HomeSliderItem[]>(STORAGE_KEYS.HOME_SLIDERS, DEFAULT_HOME_SLIDERS);
+    const stored = this.safeGet<HomeSliderItem[]>(STORAGE_KEYS.HOME_SLIDERS, DEFAULT_HOME_SLIDERS);
+    return stored.map((s) => {
+      if (!s.imageUrl) {
+        const def = DEFAULT_HOME_SLIDERS.find((d) => d.id === s.id);
+        if (def?.imageUrl) {
+          return { ...s, imageUrl: def.imageUrl };
+        }
+      }
+      return s;
+    });
   }
 
   saveHomeSlider(slider: HomeSliderItem): void {
