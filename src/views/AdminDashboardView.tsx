@@ -249,8 +249,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // Active Admin Tabs
   const [activeTab, setActiveTab] = useState<
-    'featured-video' | 'home-slider' | 'live' | 'chapters-videos' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
-  >('featured-video');
+    'overview' | 'featured-video' | 'home-slider' | 'live' | 'chapters-videos' | 'enquiries' | 'students' | 'quiz50' | 'materials' | 'pyq' | 'notifications' | 'database' | 'settings'
+  >('overview');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Supabase live data states
   const [supabaseEnquiries, setSupabaseEnquiries] = useState<any[]>([]);
@@ -1013,51 +1014,307 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   // =========================================================
   // AUTHENTICATED: FULL MASTER ADMIN CONSOLE
   // =========================================================
+  const tabTitles: Record<typeof activeTab, string> = {
+    overview: 'Dashboard Overview',
+    'featured-video': 'Home Page Video',
+    'home-slider': 'Homepage Banners',
+    live: 'Live Classes & Videos',
+    'chapters-videos': 'Chapter-wise Videos',
+    enquiries: 'Student Enquiries',
+    students: 'Registered Students',
+    quiz50: '50-MCQ Live Quiz',
+    materials: 'Study Material & Notes',
+    pyq: 'Previous Year Papers',
+    notifications: 'UPMSP Circulars',
+    database: 'Database & Stress Test',
+    settings: 'General Settings',
+  };
+
+  const navSections = [
+    {
+      label: 'CONTROL CENTER',
+      items: [
+        { id: 'overview' as const, label: 'Dashboard Statistics', icon: BarChart3 },
+      ],
+    },
+    {
+      label: 'STUDENT & ENQUIRIES',
+      items: [
+        { id: 'enquiries' as const, label: 'Student Enquiries', icon: MessageSquare },
+        { id: 'students' as const, label: 'Registered Students', icon: Users },
+      ],
+    },
+    {
+      label: 'CONTENT MANAGEMENT',
+      items: [
+        { id: 'home-slider' as const, label: 'Homepage Banners', icon: Sparkles },
+        { id: 'featured-video' as const, label: 'Home Page Video', icon: Play },
+        { id: 'live' as const, label: 'Live Classes & Videos', icon: Video },
+        { id: 'chapters-videos' as const, label: 'Chapter-wise Videos', icon: Youtube },
+        { id: 'materials' as const, label: 'Study Material & Notes', icon: FileText },
+        { id: 'pyq' as const, label: 'Previous Year Papers', icon: Download },
+        { id: 'quiz50' as const, label: '50-MCQ Live Quiz', icon: HelpCircle },
+        { id: 'notifications' as const, label: 'UPMSP Circulars', icon: Bell },
+      ],
+    },
+    {
+      label: 'CONFIGURATION',
+      items: [
+        { id: 'database' as const, label: 'Database & Stress Test', icon: Database },
+        { id: 'settings' as const, label: 'General Settings', icon: Settings },
+      ],
+    },
+  ];
+
+  const recentActivities = [
+    ...enquiries.slice(0, 3).map((e) => ({
+      user: e.email || e.mobile || e.studentName,
+      category: `${e.classLevel} · ${e.subject || 'Enquiry'}`,
+      status: e.status === 'Closed' ? 'COMPLETED' : 'PENDING',
+      time: 'Recently',
+    })),
+    ...supabaseStudents.slice(0, 3).map((s: any) => ({
+      user: s.email || s.full_name || s.fullName || 'Student',
+      category: `${s.class_level || s.classLevel || 'Class 12'} · Student`,
+      status: 'COMPLETED',
+      time: 'Recently',
+    })),
+  ].slice(0, 6);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      
-      {/* Top Admin Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-6 rounded-3xl shadow-xl border border-slate-800">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xl shadow-md">
-            <Shield className="w-6 h-6" />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc] text-slate-900">
+      {/* Mobile Top Bar */}
+      <div className="lg:hidden flex items-center justify-between bg-[#0d1222] text-white px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-[#5b46f6] flex items-center justify-center">
+            <Shield className="w-4 h-4 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-heading font-extrabold text-white">
-                UP Board Coaching Admin Dashboard
-              </h1>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase">
-                Active Session
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Live Backend: Supabase Connected ({isSupabaseConfigured() ? 'Active sb_publishable' : 'Offline'}) · URL: /admin
-            </p>
+            <div className="text-sm font-extrabold tracking-wide leading-tight">UP BOARD</div>
+            <div className="text-[10px] text-[#7b849b]">Admin Dashboard</div>
           </div>
         </div>
+        <button
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-semibold"
+        >
+          {mobileSidebarOpen ? 'Close' : 'Menu'}
+        </button>
+      </div>
 
-        <div className="flex items-center gap-3">
+      {/* Left Dark Navy Sidebar */}
+      <aside
+        className={`${
+          mobileSidebarOpen ? 'flex' : 'hidden'
+        } lg:flex w-full lg:w-64 shrink-0 bg-[#0d1222] text-white flex-col justify-between p-5 select-none`}
+      >
+        <div className="space-y-6">
+          {/* Brand Header */}
+          <div className="hidden lg:flex items-center gap-3 px-1 pt-1">
+            <div className="w-9 h-9 rounded-xl bg-[#5b46f6] flex items-center justify-center shadow-lg shadow-[#5b46f6]/30 shrink-0">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-extrabold tracking-wide text-white leading-tight">
+                UP BOARD
+              </div>
+              <div className="text-[11px] text-[#7b849b] font-medium">
+                Admin Dashboard
+              </div>
+            </div>
+          </div>
+
+          {/* Categorized Navigation */}
+          <nav className="space-y-5">
+            {navSections.map((section) => (
+              <div key={section.label} className="space-y-1.5">
+                <div className="px-3 text-[10px] font-bold tracking-wider uppercase text-[#525c75]">
+                  {section.label}
+                </div>
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          setMobileSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] transition-all cursor-pointer text-left ${
+                          isActive
+                            ? 'bg-[#5b46f6] text-white font-semibold shadow-md shadow-[#5b46f6]/25'
+                            : 'text-[#94a3b8] hover:text-white hover:bg-white/5 font-medium'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        {/* Bottom Logout Session */}
+        <div className="pt-6 mt-6 border-t border-white/5 space-y-1">
           <button
             onClick={() => {
               if (onNavigateHome) onNavigateHome();
               else window.location.href = '/';
             }}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all cursor-pointer"
           >
-            <Eye className="w-3.5 h-3.5 text-amber-400" />
+            <Eye className="w-4 h-4 shrink-0" />
             <span>View Website</span>
           </button>
-
           <button
             onClick={handleAdminLogout}
-            className="px-3.5 py-2 rounded-xl bg-red-600/20 border border-red-500/30 hover:bg-red-600 text-red-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold text-[#f87171] hover:bg-red-500/10 transition-all cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Logout</span>
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span>Logout Session</span>
           </button>
         </div>
-      </div>
+      </aside>
+
+      {/* Right Main Content Area */}
+      <div className="flex-1 min-w-0 p-6 sm:p-8 lg:p-10 space-y-8">
+        {/* Top Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-[26px] font-heading font-extrabold text-slate-900 tracking-tight">
+            {tabTitles[activeTab]}
+          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-bold tracking-wider uppercase text-slate-600">
+              REALTIME SYNC ACTIVE
+            </span>
+          </div>
+        </div>
+
+        {/* =========================================================
+            TAB 0: DASHBOARD OVERVIEW (4 KPI Cards + Recent Activity)
+           ========================================================= */}
+        {activeTab === 'overview' && (
+          <div className="space-y-8">
+            {/* 4 KPI Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.05)] flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-extrabold text-slate-900 leading-none">
+                    {supabaseStudents.length}
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase mt-1.5">
+                    REGISTERED STUDENTS
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.05)] flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-extrabold text-slate-900 leading-none">
+                    {liveClasses.length}
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase mt-1.5">
+                    LIVE CLASSES
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.05)] flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-extrabold text-slate-900 leading-none">
+                    {studyMaterials.length}
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase mt-1.5">
+                    STUDY MATERIALS
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.05)] flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-2xl font-extrabold text-slate-900 leading-none">
+                    {(adminSettings as any).homeSlider?.length ?? 4}
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase mt-1.5">
+                    LIVE BANNERS
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Activity Table */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.05)] overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100">
+                <h2 className="text-xs font-extrabold text-slate-800 tracking-wider uppercase">
+                  RECENT ACTIVITY
+                </h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="py-3.5 px-6">STUDENT / USER</th>
+                      <th className="py-3.5 px-6">CATEGORY</th>
+                      <th className="py-3.5 px-6">STATUS</th>
+                      <th className="py-3.5 px-6 text-right">TIME</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm">
+                    {recentActivities.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400 text-xs">
+                          No recent activity recorded yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      recentActivities.map((act, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-4 px-6 font-semibold text-slate-800">
+                            {act.user}
+                          </td>
+                          <td className="py-4 px-6 text-xs font-semibold text-emerald-600">
+                            {act.category}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider ${
+                                act.status === 'COMPLETED'
+                                  ? 'bg-emerald-50 text-emerald-600'
+                                  : 'bg-amber-50 text-amber-600'
+                              }`}
+                            >
+                              {act.status}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right text-xs text-slate-400">
+                            {act.time}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Main Navigation Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold">
@@ -3575,6 +3832,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </div>
       )}
 
+      </div>
     </div>
   );
 };
